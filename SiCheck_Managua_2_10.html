@@ -1680,7 +1680,7 @@ canvas[id^="firma"] {
   .barra-fija,
   .saludoUsuario,
   #printPDF,
-  #printHomePDF  {
+  #btnInformePNG  {
     display: none !important;
   }
   #headerHomePDF {
@@ -2330,7 +2330,7 @@ let seguridadEvaluada = false;
           <button class="btn-diagonal" id="btnCHECK1" onclick="mostrarChecklist(this)"></button>
           <button class="btn-diagonal" id="btnCHECK2" onclick="mostrarChecklist(this)"></button>
           <button class="btn-diagonal" id="btnCHECK3" onclick="mostrarChecklist(this)"></button>
-          <button class="btn-diagonal btn-diagonal-informe" id="printHomePDF" onclick="imprimirHomePDF()"></button>
+          <button class="btn-diagonal btn-diagonal-informe" id="btnInformePNG" onclick="generarInformePNG()"></button>
         </div>
         <div class="banner-progreso-contenedor">
           <div id="bannerProgresoBarra" class="banner-progreso-barra"></div>
@@ -3307,8 +3307,9 @@ setInterval(actualizarHeaderHome, 1000);
 /* 🖨️ Reemplazo de imprimir preservando header visible */
 // ============================================================
 // 📄 INFORME PERSONAL DE TURNO
-// Antes este botón imprimía estadísticas globales mezclando a todos los
-// analistas. Ahora genera una bitácora de TODO lo que el analista en
+// Se descarga como imagen PNG (scale 5). Antes este botón imprimía
+// estadísticas globales mezclando a todos los analistas. Ahora genera una
+// bitácora de TODO lo que el analista en
 // sesión hizo durante su turno actual: checklists (con puntualidad),
 // novedades publicadas, comentarios que dio y el alcance que tuvo lo
 // que publicó.
@@ -3334,7 +3335,8 @@ function obtenerVentanaReporte(numeroReporte, limitesTurno) {
   return { inicio: aFecha(rango.inicio), fin: aFecha(rango.fin) };
 }
 
-function imprimirHomePDF() {
+function generarInformePNG() {
+  if (generarInformePNG.enCurso) return; // evita generar dos veces con doble clic
   if (!window.usuarioSeleccionado) {
     alert("Debes haber iniciado sesión para generar el informe.");
     return;
@@ -3386,6 +3388,7 @@ function imprimirHomePDF() {
     .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
 
   const NOMBRES_CALIF = { 1: "Insignificante", 2: "Esperado", 3: "Curioso", 4: "Interesante", 5: "Extraordinario" };
+  const COLORES_CALIF = { 1: "#78909c", 2: "#0091ff", 3: "#00c853", 4: "#ff9100", 5: "#e8003d" };
   const desgloseCalif = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   novedadesPropias.forEach(nv => { if (desgloseCalif[nv.calificacion] !== undefined) desgloseCalif[nv.calificacion]++; });
 
@@ -3408,6 +3411,11 @@ function imprimirHomePDF() {
   });
 
   // ---------- Construir el HTML del informe ----------
+  const colorPuntualidad = (p) =>
+    p.includes("A tiempo") || p.includes("Completado") ? "#00a843"
+    : p.includes("Tardío") ? "#ff8c00"
+    : "#e8003d";
+
   const filasReportes = reportesInfo.map(r => {
     const obsHTML = r.envio && r.envio.observaciones.length
       ? `<ul style="margin:4px 0 0 16px; padding:0;">${r.envio.observaciones.map(o => `<li><strong>${esc(o.control)}:</strong> ${esc(o.texto)}</li>`).join("")}</ul>`
@@ -3418,14 +3426,16 @@ function imprimirHomePDF() {
           const cumple = vals.filter(v => v.etiqueta === "Cumple").length;
           const parcial = vals.filter(v => v.etiqueta === "Parcial").length;
           const noCumple = vals.filter(v => v.etiqueta === "No cumple").length;
-          return `✅ ${cumple} Cumple &nbsp; ⚠️ ${parcial} Parcial &nbsp; ❌ ${noCumple} No cumple`;
+          return `<span class="chip" style="background:#00c853;">✅ ${cumple} Cumple</span>
+                  <span class="chip" style="background:#ffb300;">⚠️ ${parcial} Parcial</span>
+                  <span class="chip" style="background:#ff1744;">❌ ${noCumple} No cumple</span>`;
         })()
       : "—";
     return `
       <tr>
-        <td style="text-align:center; font-weight:bold;">${r.numero}</td>
+        <td style="text-align:center; font-weight:900; font-size:16px; color:#0052cc;">${r.numero}</td>
         <td>${r.envio ? fmt(r.envio.fechaHoraEnvio) : "—"}</td>
-        <td>${r.puntualidad}</td>
+        <td><span class="chip" style="background:${colorPuntualidad(r.puntualidad)};">${r.puntualidad}</span></td>
         <td>${resumenResultados}</td>
         <td>${obsHTML}</td>
       </tr>`;
@@ -3435,87 +3445,161 @@ function imprimirHomePDF() {
     ? novedadesPropias.map(nv => `
       <tr>
         <td>${fmt(nv.fechaHora)}</td>
-        <td>${esc(nv.titulo)}</td>
-        <td style="text-align:center;">${NOMBRES_CALIF[nv.calificacion] || nv.calificacion}</td>
+        <td><strong>${esc(nv.titulo)}</strong></td>
+        <td style="text-align:center;"><span class="chip" style="background:${COLORES_CALIF[nv.calificacion] || "#607d8b"};">${NOMBRES_CALIF[nv.calificacion] || nv.calificacion}</span></td>
         <td>${esc(nv.descripcion)}</td>
       </tr>`).join("")
-    : `<tr><td colspan="4" style="text-align:center; color:#888;">No publicó novedades en este turno.</td></tr>`;
+    : `<tr><td colspan="4" class="vacio">No publicó novedades en este turno.</td></tr>`;
 
   const filasComentarios = comentariosPropios.length
     ? comentariosPropios.map(c => `
       <tr>
         <td>${fmt(c.fechaHora)}</td>
-        <td>${esc(c.novedad)}${c.esPropia ? ' <span style="color:#888;">(propia)</span>' : ""}</td>
+        <td><strong>${esc(c.novedad)}</strong>${c.esPropia ? ' <span style="color:#888;">(propia)</span>' : ""}</td>
         <td>${esc(c.texto)}</td>
       </tr>`).join("")
-    : `<tr><td colspan="3" style="text-align:center; color:#888;">No escribió comentarios en este turno.</td></tr>`;
+    : `<tr><td colspan="3" class="vacio">No escribió comentarios en este turno.</td></tr>`;
 
   const contenido = `
-    <html>
-      <head>
-        <title>Informe de Turno — ${esc(usuario)}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 24px; color: #222; }
-          h1 { color: #003366; margin-bottom: 4px; }
-          h2 { color: #004080; border-bottom: 2px solid #004080; padding-bottom: 4px; margin-top: 28px; }
-          .subtitulo { color: #555; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-          th, td { border: 1px solid #ccc; padding: 7px 8px; font-size: 13px; text-align: left; vertical-align: top; }
-          th { background: #f0f4f8; color: #003366; }
-          .resumen-caja { display: flex; gap: 8px; flex-wrap: nowrap; margin-top: 10px; }
-          .resumen-item { flex: 1 1 0; min-width: 0; background: #f7f9fb; border: 1px solid #dde3e8; border-radius: 8px; padding: 8px 10px; }
-          .resumen-item .numero { font-size: 22px; font-weight: 900; color: #003366; }
-          .resumen-item .etiqueta { font-size: 11.5px; color: #555; }
-          @media print { body { padding: 10px; } }
-        </style>
-      </head>
-      <body>
-        <h1>📄 Informe de Turno</h1>
-        <div class="subtitulo">
-          <strong>${esc(usuario)}</strong> &nbsp;|&nbsp; Jornada N° ${esc(jornada)} &nbsp;|&nbsp; Turno ${esc(turnoTexto)}<br>
-          ${fmt(limites.inicio.toISOString())} – ${fmt(limites.fin.toISOString())}
-        </div>
+    <style>
+      #informePNGCaptura { font-family: Arial, sans-serif; color: #1a1a1a; background: #ffffff; width: 1100px; padding: 0 0 28px 0; box-sizing: border-box; }
+      #informePNGCaptura * { box-sizing: border-box; }
+      #informePNGCaptura .encabezado { background: linear-gradient(135deg, #0047ff, #00b4ff); color: #fff; padding: 26px 32px; margin: 0; }
+      #informePNGCaptura .encabezado h1 { font-size: 30px; font-weight: 900; margin: 0 0 6px 0; padding: 0; color: #fff; background: none; }
+      #informePNGCaptura .encabezado .subtitulo { font-size: 15px; line-height: 1.5; margin: 0; padding: 0; color: #fff; }
+      #informePNGCaptura .cuerpo { padding: 0 32px; }
+      #informePNGCaptura h2 { font-size: 18px; font-weight: 900; color: #fff; border-radius: 8px; padding: 9px 14px; margin: 26px 0 10px 0; }
+      #informePNGCaptura table { width: 100%; border-collapse: collapse; margin: 8px 0 0 0; }
+      #informePNGCaptura th, #informePNGCaptura td { border: 1px solid #d0d7e2; padding: 8px 9px; font-size: 13.5px; text-align: left; vertical-align: top; }
+      #informePNGCaptura th { background: #0b1f5c; color: #fff; font-weight: 800; }
+      #informePNGCaptura tr:nth-child(even) td { background: #f2f7ff; }
+      #informePNGCaptura .vacio { text-align: center; color: #888; font-style: italic; }
+      #informePNGCaptura .chip { display: inline-block; color: #fff; font-weight: 800; font-size: 12px; padding: 3px 9px; border-radius: 12px; margin: 1px 2px; white-space: nowrap; }
+      #informePNGCaptura .resumen-caja { display: flex; gap: 10px; flex-wrap: nowrap; margin: 10px 0 0 0; padding: 0; }
+      #informePNGCaptura .resumen-item { flex: 1 1 0; min-width: 0; color: #fff; border-radius: 10px; padding: 12px 12px; box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+      #informePNGCaptura .resumen-item .numero { font-size: 28px; font-weight: 900; margin: 0; padding: 0; }
+      #informePNGCaptura .resumen-item .etiqueta { font-size: 12.5px; font-weight: 700; margin: 0; padding: 0; }
+      #informePNGCaptura .pie { margin: 22px 32px 0 32px; padding: 0; font-size: 11.5px; color: #777; text-align: right; }
+    </style>
+    <div class="encabezado">
+      <h1>📄 Informe de Turno</h1>
+      <div class="subtitulo">
+        <strong>${esc(usuario)}</strong> &nbsp;|&nbsp; Jornada N° ${esc(jornada)} &nbsp;|&nbsp; Turno ${esc(turnoTexto)}<br>
+        ${fmt(limites.inicio.toISOString())} – ${fmt(limites.fin.toISOString())}
+      </div>
+    </div>
+    <div class="cuerpo">
+      <h2 style="background:linear-gradient(90deg,#00b140,#00e676);">1. Checklists (Reportes del turno)</h2>
+      <table>
+        <tr><th>N°</th><th>Hora de envío</th><th>Puntualidad</th><th>Resultados</th><th>Observaciones</th></tr>
+        ${filasReportes}
+      </table>
 
-        <h2>1. Checklists (Reportes del turno)</h2>
-        <table>
-          <tr><th>N°</th><th>Hora de envío</th><th>Puntualidad</th><th>Resultados</th><th>Observaciones</th></tr>
-          ${filasReportes}
-        </table>
+      <h2 style="background:linear-gradient(90deg,#7c00ff,#c63bff);">2. Novedades publicadas</h2>
+      <div class="resumen-caja">
+        ${Object.entries(desgloseCalif).map(([k, v]) => `<div class="resumen-item" style="background:${COLORES_CALIF[k]};"><div class="numero">${v}</div><div class="etiqueta">${NOMBRES_CALIF[k]}</div></div>`).join("")}
+      </div>
+      <table style="margin-top:14px;">
+        <tr><th>Hora</th><th>Título</th><th>Calificación</th><th>Descripción</th></tr>
+        ${filasNovedades}
+      </table>
 
-        <h2>2. Novedades publicadas</h2>
-        <div class="resumen-caja">
-          ${Object.entries(desgloseCalif).map(([k, v]) => `<div class="resumen-item"><div class="numero">${v}</div><div class="etiqueta">${NOMBRES_CALIF[k]}</div></div>`).join("")}
-        </div>
-        <table style="margin-top:14px;">
-          <tr><th>Hora</th><th>Título</th><th>Calificación</th><th>Descripción</th></tr>
-          ${filasNovedades}
-        </table>
+      <h2 style="background:linear-gradient(90deg,#ff6d00,#ffab00);">3. Seguimiento que dio (comentarios)</h2>
+      <table>
+        <tr><th>Hora</th><th>Novedad</th><th>Comentario</th></tr>
+        ${filasComentarios}
+      </table>
 
-        <h2>3. Seguimiento que dio (comentarios)</h2>
-        <table>
-          <tr><th>Hora</th><th>Novedad</th><th>Comentario</th></tr>
-          ${filasComentarios}
-        </table>
-
-        <h2>4. Alcance de lo que publicó</h2>
-        <div class="resumen-caja">
-          <div class="resumen-item"><div class="numero">${lecturasRecibidas}</div><div class="etiqueta">👁 Lecturas de otros analistas</div></div>
-          <div class="resumen-item"><div class="numero">${comentariosRecibidos}</div><div class="etiqueta">💬 Comentarios recibidos</div></div>
-          <div class="resumen-item"><div class="numero">${reaccionesRecibidas}</div><div class="etiqueta">👍 Reacciones recibidas</div></div>
-        </div>
-      </body>
-    </html>
+      <h2 style="background:linear-gradient(90deg,#e8003d,#ff4f7b);">4. Alcance de lo que publicó</h2>
+      <div class="resumen-caja">
+        <div class="resumen-item" style="background:#0091ff;"><div class="numero">${lecturasRecibidas}</div><div class="etiqueta">👁 Lecturas de otros analistas</div></div>
+        <div class="resumen-item" style="background:#00bfa5;"><div class="numero">${comentariosRecibidos}</div><div class="etiqueta">💬 Comentarios recibidos</div></div>
+        <div class="resumen-item" style="background:#ff2d95;"><div class="numero">${reaccionesRecibidas}</div><div class="etiqueta">👍 Reacciones recibidas</div></div>
+      </div>
+    </div>
+    <div class="pie">Generado: ${fmt(new Date().toISOString())}</div>
   `;
 
-  // 🔹 Abrir ventana de impresión (mismo patrón de siempre)
-  const ventana = window.open("", "_blank");
-  ventana.document.open();
-  ventana.document.write(contenido);
-  ventana.document.close();
-  ventana.onload = function () {
-    ventana.print();
-    ventana.close();
+  // 🖼️ Antes se abría una ventana nueva con document.write + print(): el
+  // diálogo de impresión bloqueaba la pestaña principal (comparte proceso
+  // con la ventana abierta) y el sitio quedaba congelado incluso al
+  // refrescar. Ahora el informe se arma fuera de pantalla en la misma
+  // página y se descarga como PNG con html2canvas — sin ventanas ni print().
+  if (typeof html2canvas !== "function") {
+    alert("No se pudo generar el informe: la librería html2canvas no está disponible.");
+    return;
+  }
+
+  const btn = document.getElementById("btnInformePNG");
+  generarInformePNG.enCurso = true;
+  if (btn) btn.style.cursor = "progress";
+
+  const captura = document.createElement("div");
+  captura.id = "informePNGCaptura";
+  captura.style.cssText = "position:fixed; left:-20000px; top:0; z-index:-1;";
+  captura.innerHTML = contenido;
+  document.body.appendChild(captura);
+
+  // Scale 5 para máxima nitidez; si el informe es muy largo se baja lo
+  // justo para no superar el tamaño máximo de canvas del navegador
+  // (si se excede, html2canvas devuelve una imagen en blanco).
+  const ESCALA_DESEADA = 5;
+  const LADO_MAX = 32000;
+  const AREA_MAX = 260000000;
+  const anchoCss = captura.scrollWidth;
+  const altoCss = captura.scrollHeight;
+  const escala = Math.min(
+    ESCALA_DESEADA,
+    LADO_MAX / anchoCss,
+    LADO_MAX / altoCss,
+    Math.sqrt(AREA_MAX / (anchoCss * altoCss))
+  );
+
+  const terminar = () => {
+    captura.remove();
+    generarInformePNG.enCurso = false;
+    if (btn) btn.style.cursor = "";
   };
+
+  html2canvas(captura, {
+    scale: escala,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    width: anchoCss,
+    height: altoCss,
+    windowWidth: anchoCss,
+    windowHeight: altoCss,
+    scrollX: 0,
+    scrollY: 0,
+    onclone: (doc) => {
+      // En el clon se coloca en el origen para que html2canvas lo dibuje completo.
+      const el = doc.getElementById("informePNGCaptura");
+      if (el) el.style.left = "0px";
+    }
+  }).then(canvas => {
+    canvas.toBlob(blob => {
+      if (!blob) {
+        alert("No se pudo generar la imagen del informe.");
+        terminar();
+        return;
+      }
+      const fechaArchivo = new Date().toISOString().slice(0, 10);
+      const nombreArchivo = `Informe-Turno-${usuario}-J${jornada}-${turnoTexto}-${fechaArchivo}.png`.replace(/[\\/:*?"<>|\s]+/g, "_");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = nombreArchivo;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      terminar();
+    }, "image/png");
+  }).catch(err => {
+    console.error("Error al generar el informe PNG:", err);
+    alert("Ocurrió un error al generar el informe PNG.");
+    terminar();
+  });
 }
 
 
@@ -3829,7 +3913,7 @@ const horarios = {
     { inicio: 16 * 60 + 00, fin: 31 * 60 + 55 }],  // 30:00 - 30:20 (día siguiente)
 
   // Diurno: 15:55 | Nocturno: 07:55 (día siguiente, notación extendida 31:55)
-  printHomePDF: [
+  btnInformePNG: [
     { inicio: 15 * 60 + 55, fin: 16 * 60 + 05 },
     { inicio: 31 * 60 + 55, fin: 32 * 60 + 05 } ]
 
@@ -3871,7 +3955,7 @@ function actualizarEtiquetasHorarioBotones() {
     if (btn) btn.innerHTML = construirHTMLBoton("Reporte", set[i]);
   });
 
-  const btnResumen = document.getElementById("printHomePDF");
+  const btnResumen = document.getElementById("btnInformePNG");
   if (btnResumen) {
     btnResumen.innerHTML = construirHTMLBoton("Informe", esDiurno ? ETIQUETA_RESUMEN.diurno : ETIQUETA_RESUMEN.nocturno);
   }
@@ -3957,7 +4041,7 @@ if (!enHorario) {
     // 🟢 Resaltar en verde el botón que está actualmente habilitado
     // (diseño nuevo con esquinas diagonales), salvo el de Informe que
     // conserva su color rojo propio.
-    if (id !== "printHomePDF" && btn.classList.contains("btn-diagonal")) {
+    if (id !== "btnInformePNG" && btn.classList.contains("btn-diagonal")) {
       btn.classList.toggle("btn-activo", enHorario);
     }
 
@@ -4664,7 +4748,7 @@ function actualizarBarraProgresoTurno(esDiurno, minutosTotales) {
 
   const marcasCont = document.getElementById("bannerProgresoMarcas");
   if (marcasCont && typeof horarios !== "undefined") {
-    const idsBotones = ["btnCHECK1", "btnCHECK2", "btnCHECK3", "printHomePDF"];
+    const idsBotones = ["btnCHECK1", "btnCHECK2", "btnCHECK3", "btnInformePNG"];
     const indiceEntrada = esDiurno ? 0 : 1;
     const marcasMin = idsBotones
       .map(id => (horarios[id] && horarios[id][indiceEntrada]) ? horarios[id][indiceEntrada].inicio : null)
