@@ -3960,44 +3960,28 @@ function actualizarBotonesCheck() {
 
     let enHorario = false;
     let tooltipMsg = "Inicia próximamente";
-    let proximoInicio = null;
     let segundosRestantesActivo = null;
 
+    // Cada rango usa notación extendida (minutos desde la medianoche, y más
+    // de 1440 cuando termina al día siguiente). Antes, un rango que INICIA
+    // hoy pero TERMINA mañana (ej. STAT nocturno 16:00 → 31:55) se evaluaba
+    // como "mismo día" con fin = 07:55, y la condición "≥ 16:00 y ≤ 07:55"
+    // nunca se cumplía: STAT quedaba bloqueado todo el turno nocturno.
+    // Ahora se prueba la hora actual tal cual y también +24h (después de la
+    // medianoche), así funciona con cualquier rango.
+    const segundosAhora = totalMin * 60 + ahora.getSeconds();
     for (let rango of horarios[id]) {
-      // Normalizamos usando módulo 1440
-      const inicio = rango.inicio % 1440;
-      const fin = rango.fin % 1440;
-
-      // Si el rango es del mismo día
-      if (rango.inicio < 1440) {
-        if (totalMin >= inicio && totalMin <= fin) {
+      for (const desfase of [0, 1440]) {
+        const minutosEval = totalMin + desfase;
+        if (minutosEval >= rango.inicio && minutosEval <= rango.fin) {
           enHorario = true;
-          const t = tiempoRestante(fin / 60 >> 0, fin % 60);
-          tooltipMsg = `Finaliza en ${t.minutos}m ${t.segundos}s`;
-          segundosRestantesActivo = t.minutos * 60 + t.segundos;
+          const restante = Math.max(rango.fin * 60 - (segundosAhora + desfase * 60) - 1, 0);
+          tooltipMsg = `Finaliza en ${Math.floor(restante / 60)}m ${restante % 60}s`;
+          segundosRestantesActivo = restante;
           break;
-        } else if (totalMin < inicio) {
-          if (proximoInicio === null || inicio < proximoInicio) {
-            proximoInicio = inicio;
-          }
-        }
-      } else {
-        // Si el rango es del día siguiente (ej. 25*60, 29*60, etc.)
-        const minutosHoy = totalMin + 1440; // extendemos a 48h
-        if (minutosHoy >= rango.inicio && minutosHoy <= rango.fin) {
-          enHorario = true;
-          const finHora = Math.floor(fin / 60);
-          const finMin = fin % 60;
-          const t = tiempoRestante(finHora, finMin);
-          tooltipMsg = `Finaliza en ${t.minutos}m ${t.segundos}s`;
-          segundosRestantesActivo = t.minutos * 60 + t.segundos;
-          break;
-        } else if (minutosHoy < rango.inicio) {
-          if (proximoInicio === null || rango.inicio < proximoInicio) {
-            proximoInicio = rango.inicio;
-          }
         }
       }
+      if (enHorario) break;
     }
 
     // Si no está activo, calcular minutos hasta el próximo inicio real en ciclo de 24h
@@ -4021,8 +4005,12 @@ if (!enHorario) {
 	
 // 🔔 Aquí agregamos la lógica de alarma
     const estabaDeshabilitado = btn.disabled;
+    const estabaEnHorario = estadoBotones[id];
     estadoBotones[id] = enHorario;
-    btn.disabled = !enHorario;
+    // STAT además respeta su bloqueo de 50 min tras evaluar (statExpiracion);
+    // sin esto, este ciclo de cada segundo lo volvía a habilitar.
+    const statEnEspera = id === "STAT" && Number(localStorage.getItem("statExpiracion") || 0) > Date.now();
+    btn.disabled = !enHorario || statEnEspera;
     btn.setAttribute('data-tooltip', tooltipMsg);
 
     // 🟢 Resaltar en verde el botón que está actualmente habilitado
@@ -4033,7 +4021,8 @@ if (!enHorario) {
     }
 
     // Si estaba deshabilitado y ahora se habilitó → sonar alarma
-    if (estabaDeshabilitado && enHorario) {
+    // (solo al abrirse la ventana horaria, no al terminar la espera de STAT)
+    if (estabaDeshabilitado && enHorario && !statEnEspera && estabaEnHorario !== true) {
       const audio = document.getElementById("alarmaChecklist");
       if (audio) {
         audio.currentTime = 0;
