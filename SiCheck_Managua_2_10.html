@@ -406,10 +406,10 @@ input[type="checkbox"]:checked::after {
 .banner-progreso-contenedor {
   position: relative;
   height: 6px;
-  margin: 5px 0 4px 0;           /* espacio para los relojes ⏲️ que sobresalen */
+  margin: 5px 0 4px 0;           /* espacio para los relojes ⏱️ que sobresalen */
   background: #e2e6ea;
   border-radius: 3px;
-  overflow: visible;             /* los relojes ⏲️ son más altos que la barra */
+  overflow: visible;             /* los relojes ⏱️ son más altos que la barra */
 }
 .banner-progreso-barra {
   position: absolute;
@@ -424,11 +424,11 @@ input[type="checkbox"]:checked::after {
   top: 0; left: 0; right: 0; bottom: 0;
 }
 .banner-progreso-marca {
-  /* ⏲️ Reloj miniatura sobre la barra, centrado en la hora de inicio de cada botón */
+  /* ⏱️ Reloj miniatura sobre la barra, centrado en la hora de inicio de cada botón */
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  font-size: 13px;
+  font-size: 10px;
   line-height: 1;
   pointer-events: none;
   filter: drop-shadow(0 0 1px #fff);
@@ -4749,7 +4749,7 @@ function actualizarBarraProgresoTurno(esDiurno, minutosTotales) {
 
     const htmlMarcas = marcasMin.map(mins => {
       const pos = total > 0 ? Math.min(Math.max(((mins - inicioTurno) / total) * 100, 0), 100) : 0;
-      return `<span class="banner-progreso-marca ${mins === proxima ? "proxima" : ""}" style="left:${pos.toFixed(3)}%;">⏲️</span>`;
+      return `<span class="banner-progreso-marca ${mins === proxima ? "proxima" : ""}" style="left:${pos.toFixed(3)}%;">⏱️</span>`;
     }).join("");
     // Solo reescribir si cambió, para no reiniciar cada segundo la
     // animación del reloj próximo.
