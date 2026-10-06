@@ -5110,10 +5110,10 @@ function fechaDeReaccionGlobal(valor) {
 
 // De dos copias del MISMO comentario (mismo id, posiblemente editado por
 // separado en cada lado), se queda con la que tenga la edición más reciente
-// (de texto o, si Jorge Quintana la cambió, de fecha/hora).
+// (de texto, incluida la edición silenciosa de Jorge Quintana, o de fecha/hora).
 function comentarioMasFresco(c1, c2) {
   const marca = c => {
-    const ediciones = [c.editadoEn, c.fechaEditadaEn].filter(Boolean).map(f => new Date(f).getTime());
+    const ediciones = [c.editadoEn, c.fechaEditadaEn, c.modificadoEn].filter(Boolean).map(f => new Date(f).getTime());
     return ediciones.length ? Math.max(...ediciones) : new Date(c.fechaHora).getTime();
   };
   return marca(c2) >= marca(c1) ? c2 : c1;
@@ -7019,7 +7019,8 @@ function validarVista247(numeroVista){
     return ordenados.map(c => {
       const esAutor = usuario && usuario === c.autor;
       const dentroDeVentana = minutosDesde(c.fechaHora) <= MINUTOS_LIMITE_EDICION;
-      const puedeEditar = esAutor && dentroDeVentana;
+      // Jorge Quintana puede editar cualquier comentario en cualquier momento.
+      const puedeEditar = (esAutor && dentroDeVentana) || esJorgeQuintana();
       const enEdicion = comentarioEnEdicion &&
         comentarioEnEdicion.novedadId === novedadId &&
         comentarioEnEdicion.comentarioId === c.id;
@@ -7178,16 +7179,24 @@ function validarVista247(numeroVista){
     const comentario = (nv.comentarios || []).find(c => c.id === comentarioId);
     if (!comentario) return;
 
-    // Verificación del lado del cliente: solo el autor y dentro de los 15 minutos
+    // Verificación del lado del cliente: el autor dentro de la ventana de
+    // edición, o Jorge Quintana en cualquier momento y sobre cualquier comentario.
     const usuario = window.usuarioSeleccionado || "";
-    if (comentario.autor !== usuario || minutosDesde(comentario.fechaHora) > MINUTOS_LIMITE_EDICION) {
+    const esJorge = esJorgeQuintana();
+    if (!esJorge && (comentario.autor !== usuario || minutosDesde(comentario.fechaHora) > MINUTOS_LIMITE_EDICION)) {
       alert("Ya no puedes editar este comentario.");
       comentarioEnEdicion = null;
       return;
     }
 
     comentario.texto = nuevoTexto;
-    comentario.editadoEn = new Date().toISOString();
+    if (esJorge) {
+      // Edición de Jorge Quintana: no se marca como "editado". Solo queda una
+      // marca interna para que al fusionar llaves gane esta versión.
+      comentario.modificadoEn = new Date().toISOString();
+    } else {
+      comentario.editadoEn = new Date().toISOString();
+    }
     guardarNovedadesArray(novedades);
 
     comentarioEnEdicion = null;
