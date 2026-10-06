@@ -3013,6 +3013,34 @@ onclick="validarYAvanzar247(2,3)">
 
 </div>
 
+<!-- MODAL BIENVENIDA (al iniciar sesión, sin botón X) -->
+<div id="modalBienvenida" class="modal-pausa">
+  <div class="modal-pausa-contenido">
+    <div class="pausa-header" id="tituloBienvenida">¡BIENVENIDO!</div>
+    <div class="pausa-icono">🗝️</div>
+    <div class="pausa-mensaje">
+      No olvides <strong>RECIBIR LLAVE</strong> para visualizar las novedades más recientes.
+    </div>
+    <button class="btn-pausa" onclick="cerrarModalLlave('modalBienvenida')">
+      OK, gracias por recordarlo
+    </button>
+  </div>
+</div>
+
+<!-- MODAL RECORDATORIO DE RELEVO (15:40 y 07:40) -->
+<div id="modalRelevo" class="modal-pausa">
+  <div class="modal-pausa-contenido">
+    <div class="pausa-header">TU COMPAÑERO DE RELEVO ESTÁ POR LLEGAR.</div>
+    <div class="pausa-icono">🗝️</div>
+    <div class="pausa-mensaje">
+      No olvides <strong>ENTREGAR LLAVE</strong> antes de <strong>SALIR</strong>.
+    </div>
+    <button class="btn-pausa" onclick="cerrarModalLlave('modalRelevo')">
+      OK, gracias por recordarlo
+    </button>
+  </div>
+</div>
+
 
 
 
@@ -4905,7 +4933,39 @@ function verificarCredenciales() {
 
   // 📋 Refrescar módulo de Novedades de Turno con el analista ya identificado
   if (typeof actualizarNovedadesUI === "function") actualizarNovedadesUI();
+
+  // 👋 Bienvenida: recordar Recibir Llave
+  document.getElementById("tituloBienvenida").textContent = `¡BIENVENIDO ${usuario.toUpperCase()}!`;
+  document.getElementById("modalBienvenida").style.display = "flex";
 }
+
+function cerrarModalLlave(id) {
+  document.getElementById(id).style.display = "none";
+}
+
+// ⏰ Recordatorio de relevo: 20 minutos antes de cada cambio de turno
+// (15:40 → turno diurno termina 16:00; 07:40 → nocturno termina 08:01).
+// Se revisa cada 15 s y se muestra una sola vez por horario y día; si en
+// el minuto exacto la pestaña estaba en segundo plano (los temporizadores
+// se ralentizan), igual aparece mientras siga dentro de esos 20 minutos.
+const HORARIOS_RELEVO = [{ h: 15, m: 40 }, { h: 7, m: 40 }];
+
+function revisarRecordatorioRelevo() {
+  if (localStorage.getItem("sesionActiva") !== "true" || !window.usuarioSeleccionado) return;
+  const ahora = new Date();
+  const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
+
+  HORARIOS_RELEVO.forEach(({ h, m }) => {
+    const inicio = h * 60 + m;
+    if (minutosAhora < inicio || minutosAhora >= inicio + 20) return;
+
+    const clave = `${ahora.toDateString()}-${h}:${m}`;
+    if (sessionStorage.getItem("recordatorioRelevoMostrado") === clave) return;
+    sessionStorage.setItem("recordatorioRelevoMostrado", clave);
+    document.getElementById("modalRelevo").style.display = "flex";
+  });
+}
+setInterval(revisarRecordatorioRelevo, 15000);
 
 function leerArchivoComoTexto(file) {
   return new Promise((resolve, reject) => {
@@ -5245,12 +5305,12 @@ function recibirLlaveDeTurno(inputFile) {
 // cancela el aviso de confirmación) — por eso es el punto correcto para
 // generar la llave forzada "si el usuario confirma que sí desea salir".
 //
-// LIMITACIÓN TÉCNICA IMPORTANTE: los navegadores no permiten iniciar una
-// descarga de archivo de forma confiable mientras la página se está
-// cerrando. Por eso, en este momento solo GUARDAMOS los datos de la llave
-// forzada en localStorage (una escritura síncrona, que sí se completa a
-// tiempo); la descarga real ocurre automáticamente la próxima vez que se
-// abra la página (ver el aviso al cargar, más abajo).
+// LIMITACIÓN TÉCNICA IMPORTANTE: los navegadores no garantizan una
+// descarga de archivo mientras la página se está cerrando. Por eso se
+// intenta descargar la llave en ese instante y, además, se GUARDA en
+// localStorage (escritura síncrona, que sí se completa a tiempo); si el
+// navegador bloqueó la descarga, se descarga automáticamente la próxima vez
+// que se abra la página (ver el aviso al cargar, más abajo).
 window.addEventListener("pagehide", function () {
   try {
     if (localStorage.getItem("recargaIntencionalSiCheck") === "true") {
@@ -5271,7 +5331,22 @@ window.addEventListener("pagehide", function () {
     if (entregaPrevia && entregaPrevia.jornadaTurno === `${jornada}-${turno}`) return;
 
     const datos = construirDatosLlaveTurno(true);
-    if (datos) localStorage.setItem("llaveForzadaPendiente", JSON.stringify(datos));
+    if (!datos) return;
+
+    // Primero se guarda el respaldo (escritura síncrona, siempre se completa).
+    localStorage.setItem("llaveForzadaPendiente", JSON.stringify(datos));
+
+    // Luego se intenta descargar la llave en este mismo instante. Algunos
+    // navegadores lo permiten al cerrar; si lo bloquean, el respaldo de
+    // arriba la descarga al volver a abrir la página. No se revoca la URL
+    // del blob: la página se está cerrando y revocarla podría cortar la
+    // descarga.
+    const blob = new Blob([JSON.stringify(datos.exportObj, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = datos.nombreArchivo;
+    document.body.appendChild(a);
+    a.click();
   } catch (e) {
     // Silencioso: en "pagehide" ya no hay forma de mostrarle nada al usuario.
   }
@@ -5286,8 +5361,9 @@ document.addEventListener("DOMContentLoaded", function () {
   try {
     const datos = JSON.parse(pendiente);
     alert(
-      `⚠️ La sesión anterior se cerró inesperadamente antes de entregar la llave de turno.\n` +
-      `Se generará automáticamente una llave FORZADA:\n${datos.nombreArchivo}\n\n` +
+      `⚠️ La sesión anterior se cerró sin usar el botón SALIR y sin entregar la llave de turno.\n` +
+      `Se generó automáticamente una llave FORZADA:\n${datos.nombreArchivo}\n\n` +
+      `Se descargará de nuevo por si el navegador no la guardó al cerrar. ` +
       `Entrégala igual al analista entrante.`
     );
     descargarLlave(datos);
