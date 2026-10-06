@@ -377,6 +377,13 @@ input[type="checkbox"]:checked::after {
 .btn-diagonal.btn-activo {
   background: linear-gradient(135deg, #00cc00, #009900);
 }
+/* Reporte ya completado o cuya hora ya pasó: gris con letra muy tenue */
+.btn-diagonal.btn-check-finalizado {
+  background: #9aa0a6 !important;
+  color: rgba(255,255,255,0.3) !important;
+  opacity: 1;
+  animation: none !important;
+}
 .btn-diagonal.btn-diagonal-informe {
   background: linear-gradient(135deg, #e63946, #c62836);
 }
@@ -4092,6 +4099,18 @@ if (!enHorario) {
       const yaCompletado = btn.classList.contains("btn-bloqueado");
       const porCerrar = enHorario && !yaCompletado && segundosRestantesActivo !== null && segundosRestantesActivo <= 60;
       btn.classList.toggle("btnCHECK-por-cerrar", porCerrar);
+
+      // 🎨 Color de los Reportes: el de la franja horaria (día/tarde/noche,
+      // igual que el badge de turno) mientras su hora no ha llegado; verde
+      // mientras está habilitado; gris con letra muy tenue cuando ya se
+      // completó o ya pasó su hora dentro del turno actual.
+      const esDiurnoBtn = totalMin >= 8 * 60 && totalMin < 16 * 60;
+      const rangoTurno = horarios[id][esDiurnoBtn ? 0 : 1];
+      const minutosEnTurno = (!esDiurnoBtn && totalMin < 8 * 60) ? totalMin + 1440 : totalMin;
+      const yaPaso = !enHorario && rangoTurno && minutosEnTurno > rangoTurno.fin;
+      const finalizado = yaCompletado || yaPaso;
+      btn.classList.toggle("btn-check-finalizado", finalizado);
+      btn.style.background = (finalizado || enHorario || typeof colorFranjaHoraria !== "function") ? "" : colorFranjaHoraria();
     }
   });
 
@@ -4705,6 +4724,8 @@ document.addEventListener("DOMContentLoaded", function () {
    if (hora >= 13 && hora < 19) return "#FF8A65"; // tarde
    return "#1A237E"; // noche
  }
+ // Expuesta para que los botones de Reporte usen el mismo color.
+ window.colorFranjaHoraria = colorFranjaHoraria;
 
  function actualizarTurno() {
   const ahora = new Date();
@@ -4888,10 +4909,10 @@ actualizarHeaderHome();
  <script>
 
 function verificarCredenciales() {
-  const claveCorrecta = "Soc2026*";
-
   // Obtener valores del formulario de login
   const usuario = document.getElementById("selectorNombres").value.trim();
+  // 🔑 Jorge Quintana tiene su propia clave; el resto usa la clave general.
+  const claveCorrecta = usuario === "Jorge Quintana" ? "250689" : "Soc2026*";
   const clave = document.getElementById("clave").value.trim();
   const mensaje = document.getElementById("mensajeError");
 
