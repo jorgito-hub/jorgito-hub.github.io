@@ -532,6 +532,15 @@ input[type="checkbox"]:checked::after {
   border-radius:6px;
   font-family:inherit;
 }
+.novedad-fecha-edicion input.novedad-titulo-input {
+  font-size:14px;
+  font-weight:700;
+  padding:3px 8px;
+  border:1px solid #0066cc;
+  border-radius:6px;
+  font-family:inherit;
+  min-width:280px;
+}
 .novedad-fecha-edicion button {
   border:none;
   border-radius:10px;
@@ -5148,6 +5157,14 @@ function comentarioMasFresco(c1, c2) {
 function fusionarUnaNovedad(local, entrante) {
   const combinada = { ...local };
 
+  // ✏️ Título: si Jorge Quintana lo editó, gana la edición más reciente.
+  const tLocal = new Date(local.tituloEditadoEn || 0).getTime();
+  const tEntrante = new Date(entrante.tituloEditadoEn || 0).getTime();
+  if (tEntrante > tLocal) {
+    combinada.titulo = entrante.titulo;
+    combinada.tituloEditadoEn = entrante.tituloEditadoEn;
+  }
+
   // 👁 Leído por: unión sin duplicar nombres
   combinada.leidoPor = Array.from(new Set([...(local.leidoPor || []), ...(entrante.leidoPor || [])]));
 
@@ -6968,7 +6985,7 @@ function validarVista247(numeroVista){
     return `
       <div class="novedad-card ${yaLeida ? "leida-por-mi" : ""}" data-id="${nv.id}">
         <div class="novedad-card-top">
-          <span class="novedad-titulo">${escaparHTML(nv.titulo)} <span class="novedad-autor">creado por ${escaparHTML(nv.creadoPor || nv.leidoPor?.[0] || "Desconocido")}</span></span>
+          <span class="novedad-titulo"><span id="novedad-titulo-${nv.id}">${renderTituloNovedadHTML(nv)}</span> <span class="novedad-autor">creado por ${escaparHTML(nv.creadoPor || nv.leidoPor?.[0] || "Desconocido")}</span></span>
           <span style="text-align:center;">
             <span class="novedad-estrellas" title="Calificación: ${nv.calificacion}/5">${renderEstrellasDisplay(nv.calificacion)}</span>
             <div class="novedad-nombre-calificacion">${NOMBRES_CALIFICACION[nv.calificacion] || ""}</div>
@@ -7262,6 +7279,54 @@ function validarVista247(numeroVista){
   function esJorgeQuintana() {
     return window.usuarioSeleccionado === "Jorge Quintana";
   }
+
+  /* ---------- Título de la novedad: editable solo por Jorge Quintana ---------- */
+  function renderTituloNovedadHTML(nv) {
+    if (esJorgeQuintana()) {
+      return `<span class="novedad-fecha-editable" title="Editar título" onclick="iniciarEdicionTituloNovedad('${nv.id}')">${escaparHTML(nv.titulo)}</span>`;
+    }
+    return escaparHTML(nv.titulo);
+  }
+
+  window.iniciarEdicionTituloNovedad = function (id) {
+    if (!esJorgeQuintana()) return;
+    const nv = cargarNovedades().find(n => n.id === id);
+    const cont = document.getElementById(`novedad-titulo-${id}`);
+    if (!nv || !cont) return;
+    cont.innerHTML = `
+      <span class="novedad-fecha-edicion">
+        <input type="text" id="novedad-titulo-input-${id}" class="novedad-titulo-input" value="${escaparHTML(nv.titulo).replace(/"/g, "&quot;")}"
+          onkeydown="if(event.key==='Enter'){guardarEdicionTituloNovedad('${id}')} if(event.key==='Escape'){cancelarEdicionTituloNovedad('${id}')}">
+        <button onclick="guardarEdicionTituloNovedad('${id}')">Guardar</button>
+        <button class="cancelar" onclick="cancelarEdicionTituloNovedad('${id}')">Cancelar</button>
+      </span>`;
+    const input = document.getElementById(`novedad-titulo-input-${id}`);
+    if (input) { input.focus(); input.select(); }
+  };
+
+  window.cancelarEdicionTituloNovedad = function (id) {
+    const nv = cargarNovedades().find(n => n.id === id);
+    const cont = document.getElementById(`novedad-titulo-${id}`);
+    if (nv && cont) cont.innerHTML = renderTituloNovedadHTML(nv);
+  };
+
+  window.guardarEdicionTituloNovedad = function (id) {
+    if (!esJorgeQuintana()) {
+      alert("Solo Jorge Quintana puede editar el título de una novedad.");
+      return;
+    }
+    const nuevoTitulo = (document.getElementById(`novedad-titulo-input-${id}`)?.value || "").trim();
+    if (!nuevoTitulo) { alert("El título no puede quedar vacío."); return; }
+
+    const novedades = cargarNovedades();
+    const nv = novedades.find(n => n.id === id);
+    if (!nv) return;
+    nv.titulo = nuevoTitulo;
+    // Marca para que, al fusionar llaves, gane el título más reciente.
+    nv.tituloEditadoEn = new Date().toISOString();
+    guardarNovedadesArray(novedades);
+    actualizarNovedadesUI();
+  };
 
   /* ---------- Fecha/hora de la novedad: editable solo por Jorge Quintana ---------- */
   function renderFechaNovedadHTML(nv) {
