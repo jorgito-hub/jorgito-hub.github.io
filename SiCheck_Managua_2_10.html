@@ -5165,6 +5165,14 @@ function fusionarUnaNovedad(local, entrante) {
     combinada.tituloEditadoEn = entrante.tituloEditadoEn;
   }
 
+  // 🕒 Fecha/hora de la novedad: igual, gana la edición más reciente.
+  const fLocal = new Date(local.fechaNovedadEditadaEn || 0).getTime();
+  const fEntrante = new Date(entrante.fechaNovedadEditadaEn || 0).getTime();
+  if (fEntrante > fLocal) {
+    combinada.fechaHora = entrante.fechaHora;
+    combinada.fechaNovedadEditadaEn = entrante.fechaNovedadEditadaEn;
+  }
+
   // 👁 Leído por: unión sin duplicar nombres
   combinada.leidoPor = Array.from(new Set([...(local.leidoPor || []), ...(entrante.leidoPor || [])]));
 
@@ -7387,6 +7395,8 @@ function validarVista247(numeroVista){
     const nv = novedades.find(n => n.id === id);
     if (!nv) return;
     nv.fechaHora = nuevaFecha.toISOString();
+    // Marca para que, al fusionar llaves, gane la fecha más reciente.
+    nv.fechaNovedadEditadaEn = new Date().toISOString();
     guardarNovedadesArray(novedades);
 
     // La fecha afecta el orden de la lista, así que se refresca todo.
