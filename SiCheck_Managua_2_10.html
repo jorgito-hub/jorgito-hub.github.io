@@ -857,6 +857,22 @@ input[type="checkbox"]:checked::after {
 .btn-eliminar-novedad:hover {
   background:#b02a37;
 }
+.btn-informe-novedad {
+  background:#003366;
+  color:#fff;
+  border:none;
+  border-radius:14px;
+  padding:3px 10px;
+  font-size:11.5px;
+  cursor:pointer;
+  margin-left:auto;
+}
+.btn-informe-novedad:hover {
+  background:#0066cc;
+}
+.btn-informe-novedad + .btn-eliminar-novedad {
+  margin-left:6px;
+}
 .comentarios-panel {
   margin-top:8px;
   padding-top:8px;
@@ -2352,9 +2368,7 @@ let seguridadEvaluada = false;
 <div id="seccionNovedades">
 
   <!-- Contenedor superior con los 3 elementos alineados -->
-    <!-- Resumen turno anterior -->
   <div id="resumenTurnoAnterior" style="margin-top:12px;">
-    <h4 id="tituloTurnoAnterior" style="margin-top:12px; color:white;"></h4>
 
     <div id="filtrosHistorialNovedades"
          style="display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:12px; margin:10px 0; flex-wrap:wrap;">
@@ -2365,7 +2379,7 @@ let seguridadEvaluada = false;
         <input type="text"
                id="buscarNovedad"
                class="buscador-novedades-input"
-               placeholder="Buscar novedad por título o descripción..."
+               placeholder="Buscar novedad por título, descripción o comentarios..."
                oninput="renderHistorialNovedades()"
                autocomplete="off">
         <span class="buscador-novedades-limpiar" id="buscarNovedadLimpiar" onclick="limpiarBusquedaNovedad()" title="Limpiar búsqueda">✕</span>
@@ -2376,7 +2390,6 @@ let seguridadEvaluada = false;
       <div id="listaHistorialNovedades"></div>
     </div>
 
-    <div id="listaNovedadesTurnoAnterior"></div>
   </div>
   
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -5081,11 +5094,14 @@ function fechaDeReaccionGlobal(valor) {
 }
 
 // De dos copias del MISMO comentario (mismo id, posiblemente editado por
-// separado en cada lado), se queda con la que tenga la edición más reciente.
+// separado en cada lado), se queda con la que tenga la edición más reciente
+// (de texto o, si Jorge Quintana la cambió, de fecha/hora).
 function comentarioMasFresco(c1, c2) {
-  const t1 = new Date(c1.editadoEn || c1.fechaHora).getTime();
-  const t2 = new Date(c2.editadoEn || c2.fechaHora).getTime();
-  return t2 >= t1 ? c2 : c1;
+  const marca = c => {
+    const ediciones = [c.editadoEn, c.fechaEditadaEn].filter(Boolean).map(f => new Date(f).getTime());
+    return ediciones.length ? Math.max(...ediciones) : new Date(c.fechaHora).getTime();
+  };
+  return marca(c2) >= marca(c1) ? c2 : c1;
 }
 
 // Combina dos versiones de la MISMA novedad (mismo id, una local y otra
@@ -6777,7 +6793,7 @@ function validarVista247(numeroVista){
   let calificacionSeleccionada = 0;
 
   // 💬 Estado de la interfaz que debe sobrevivir cuando las tarjetas se
-  // vuelven a dibujar (el refresco periódico del turno anterior, guardar
+  // vuelven a dibujar (el refresco periódico de comentarios, guardar
   // una novedad, recibir datos, etc.). Antes, cada redibujo cerraba las
   // cajas de comentarios abiertas y borraba lo que se estaba escribiendo.
   const borradoresComentarios = {};          // { novedadId: "texto sin enviar" }
@@ -6933,7 +6949,7 @@ function validarVista247(numeroVista){
             <div class="reacciones-flotante" id="reacciones-flotante-${nv.id}">${renderPickerFlotante(nv.id, nv.reacciones || {})}</div>
           </span>
           <button class="btn-comentarios ${panelesComentariosAbiertos.has(nv.id) ? "activo" : (hayComentariosNoLeidos ? "no-leido" : "")}" data-id="${nv.id}" onclick="toggleComentarios('${nv.id}')">💬${comentarios.length}</button>
-          ${esJorgeQuintana() ? `<button class="btn-eliminar-novedad" onclick="eliminarNovedad('${nv.id}')">🗑️ Eliminar</button>` : ""}
+          ${esJorgeQuintana() ? `<button class="btn-informe-novedad" onclick="descargarInformeNovedad('${nv.id}')">📄 Informe</button><button class="btn-eliminar-novedad" onclick="eliminarNovedad('${nv.id}')">🗑️ Eliminar</button>` : ""}
         </div>
         <div class="reacciones-panel" id="reacciones-${nv.id}" style="display:${panelesReaccionesAbiertos.has(nv.id) ? "block" : "none"};">
           <div id="reacciones-contenido-${nv.id}">${renderContenidoReacciones(nv.id, nv.reacciones || {})}</div>
@@ -6981,7 +6997,11 @@ function validarVista247(numeroVista){
     }
     const usuario = window.usuarioSeleccionado || "";
 
-    return comentarios.map(c => {
+    // 🕒 Siempre en orden cronológico (más viejo arriba, más reciente abajo),
+    // así un cambio de fecha/hora reordena la lista al instante.
+    const ordenados = [...comentarios].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
+
+    return ordenados.map(c => {
       const esAutor = usuario && usuario === c.autor;
       const dentroDeVentana = minutosDesde(c.fechaHora) <= MINUTOS_LIMITE_EDICION;
       const puedeEditar = esAutor && dentroDeVentana;
@@ -7030,11 +7050,81 @@ function validarVista247(numeroVista){
             <span class="comentario-autor">${escaparHTML(c.autor || "Anónimo")}</span>
             <span class="comentario-texto">${escaparHTML(c.texto)}</span>
           </div>
-          <div class="comentario-fecha">${formatoFechaNovedad(c.fechaHora)}${etiquetaExtra ? "    " + etiquetaExtra : ""}</div>
+          <div class="comentario-fecha">${renderFechaComentarioHTML(novedadId, c)}${etiquetaExtra ? "    " + etiquetaExtra : ""}</div>
         </div>
       </div>`;
     }).join("");
   }
+
+  /* ---------- Fecha/hora de un comentario: editable solo por Jorge Quintana ---------- */
+  // Comentario cuya fecha se está editando: { novedadId, comentarioId }
+  let fechaComentarioEnEdicion = null;
+
+  function renderFechaComentarioHTML(novedadId, c) {
+    if (!esJorgeQuintana()) return formatoFechaNovedad(c.fechaHora);
+    const editando = fechaComentarioEnEdicion &&
+      fechaComentarioEnEdicion.novedadId === novedadId &&
+      fechaComentarioEnEdicion.comentarioId === c.id;
+    if (editando) {
+      return `
+        <span class="novedad-fecha-edicion">
+          <input type="datetime-local" id="comentario-fecha-input-${c.id}" value="${datetimeLocalDesdeISO(c.fechaHora)}"
+            onkeydown="if(event.key==='Enter'){guardarFechaComentario('${novedadId}','${c.id}')} if(event.key==='Escape'){cancelarFechaComentario('${novedadId}')}">
+          <button onclick="guardarFechaComentario('${novedadId}','${c.id}')">Guardar</button>
+          <button class="cancelar" onclick="cancelarFechaComentario('${novedadId}')">Cancelar</button>
+        </span>`;
+    }
+    return `<span class="novedad-fecha-editable" title="Editar fecha y hora" onclick="iniciarFechaComentario('${novedadId}','${c.id}')">${formatoFechaNovedad(c.fechaHora)}</span>`;
+  }
+
+  function redibujarComentariosDe(novedadId) {
+    const nv = cargarNovedades().find(n => n.id === novedadId);
+    if (!nv) return;
+    document.querySelectorAll(`#comentarios-lista-${novedadId}`).forEach(lista => {
+      const scrollPrevio = lista.scrollTop;
+      lista.innerHTML = renderListaComentarios(nv.comentarios, novedadId);
+      lista.scrollTop = scrollPrevio;
+    });
+  }
+
+  window.iniciarFechaComentario = function (novedadId, comentarioId) {
+    if (!esJorgeQuintana()) return;
+    fechaComentarioEnEdicion = { novedadId, comentarioId };
+    redibujarComentariosDe(novedadId);
+    document.getElementById(`comentario-fecha-input-${comentarioId}`)?.focus();
+  };
+
+  window.cancelarFechaComentario = function (novedadId) {
+    fechaComentarioEnEdicion = null;
+    redibujarComentariosDe(novedadId);
+  };
+
+  window.guardarFechaComentario = function (novedadId, comentarioId) {
+    if (!esJorgeQuintana()) {
+      alert("Solo Jorge Quintana puede editar la fecha y hora de un comentario.");
+      return;
+    }
+    const valor = document.getElementById(`comentario-fecha-input-${comentarioId}`)?.value;
+    const nuevaFecha = valor ? new Date(valor) : null;
+    if (!nuevaFecha || isNaN(nuevaFecha.getTime())) { alert("Selecciona una fecha y hora válidas."); return; }
+
+    const novedades = cargarNovedades();
+    const nv = novedades.find(n => n.id === novedadId);
+    const comentario = (nv?.comentarios || []).find(c => c.id === comentarioId);
+    if (!comentario) return;
+
+    comentario.fechaHora = nuevaFecha.toISOString();
+    // Marca de cuándo se cambió la fecha, para que al fusionar llaves gane
+    // esta versión sobre una copia vieja del mismo comentario.
+    comentario.fechaEditadaEn = new Date().toISOString();
+    nv.comentarios.sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
+    guardarNovedadesArray(novedades);
+
+    fechaComentarioEnEdicion = null;
+    // La última actividad de la novedad puede cambiar: se reordena todo
+    // en vivo (los paneles de comentarios abiertos se conservan abiertos).
+    actualizarNovedadesUI();
+  };
 
   window.iniciarEdicionComentario = function (novedadId, comentarioId) {
     comentarioEnEdicion = { novedadId, comentarioId };
@@ -7189,8 +7279,7 @@ function validarVista247(numeroVista){
     nv.fechaHora = nuevaFecha.toISOString();
     guardarNovedadesArray(novedades);
 
-    // La fecha afecta el orden y a qué sección (turno anterior / historial)
-    // pertenece la novedad, así que se refresca todo para reflejarlo bien.
+    // La fecha afecta el orden de la lista, así que se refresca todo.
     actualizarNovedadesUI();
   };
 
@@ -7212,27 +7301,205 @@ function validarVista247(numeroVista){
     return ultima;
   }
 
-  /* ---------- Resumen del turno anterior ---------- */
-  function renderResumenTurnoAnterior() {
-    const cont = document.getElementById("listaNovedadesTurnoAnterior");
-    const titulo = document.getElementById("tituloTurnoAnterior");
-    if (!cont || !titulo) return;
 
-    const { inicio, fin, esDiurno } = obtenerTurnoAnterior();
-    const etiqueta = esDiurno ? "DIURNO" : "NOCTURNO";
-    titulo.textContent = `NOVEDADES DEL TURNO ${etiqueta} ANTERIOR (${formatoRangoHora(inicio)} – ${formatoRangoHora(fin)})`;
-
-    const novedades = cargarNovedades().filter(nv => {
-      const t = new Date(nv.fechaHora).getTime();
-      return t >= inicio.getTime() && t < fin.getTime();
-    }).sort((a, b) => ultimaActividad(b) - ultimaActividad(a));
-
-    if (novedades.length === 0) {
-      cont.innerHTML = `<div class="novedad-vacio">No se registraron novedades en el turno anterior.</div>`;
+  /* ---------- Informe ejecutivo de una novedad (solo Jorge Quintana) ---------- */
+  // Se arma fuera de pantalla y se descarga como PNG con html2canvas, igual
+  // que el Informe de turno.
+  window.descargarInformeNovedad = function (id) {
+    if (!esJorgeQuintana()) {
+      alert("Solo Jorge Quintana puede descargar el informe de una novedad.");
       return;
     }
-    const vistas = marcarComoVistas(novedades);
-    redibujarConservandoFoco(() => { cont.innerHTML = vistas.map(crearNovedadCard).join(""); });
+    if (typeof html2canvas !== "function") {
+      alert("No se pudo generar el informe: la librería html2canvas no está disponible.");
+      return;
+    }
+    if (descargarInformeNovedad.enCurso) return;
+    const nv = cargarNovedades().find(n => n.id === id);
+    if (!nv) return;
+
+    const esc = escaparHTML;
+    const fmt = iso => formatoFechaNovedad(iso);
+    const comentarios = [...(nv.comentarios || [])].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
+    const creador = nv.creadoPor || nv.leidoPor?.[0] || "Desconocido";
+    const turnoNv = obtenerLimitesTurno(nv.fechaHora);
+    const participantes = Array.from(new Set([creador, ...comentarios.map(c => c.autor || "Anónimo")]));
+    const ultimaFecha = comentarios.length ? comentarios[comentarios.length - 1].fechaHora : nv.fechaHora;
+
+    // Duración del seguimiento: del registro de la novedad a su último comentario.
+    const minutosSeg = Math.max(0, Math.round((new Date(ultimaFecha) - new Date(nv.fechaHora)) / 60000));
+    const dias = Math.floor(minutosSeg / 1440), horas = Math.floor((minutosSeg % 1440) / 60), mins = minutosSeg % 60;
+    const duracion = minutosSeg === 0 ? "—"
+      : [dias && `${dias} d`, horas && `${horas} h`, mins && `${mins} min`].filter(Boolean).join(" ");
+
+    const conteoReacciones = {};
+    Object.values(nv.reacciones || {}).forEach(v => {
+      const e = typeof v === "string" ? v : v?.emoji;
+      if (e) conteoReacciones[e] = (conteoReacciones[e] || 0) + 1;
+    });
+    const textoReacciones = Object.entries(conteoReacciones)
+      .map(([e, n]) => `${e} ${(REACCIONES_DISPONIBLES.find(r => r.emoji === e) || {}).leyenda || ""} (${n})`)
+      .join("   ") || "Sin reacciones";
+
+    const COLOR_CRITICIDAD = { 1: "#2e7d32", 2: "#0277bd", 3: "#f9a825", 4: "#ef6c00", 5: "#c62828" };
+    const colorCrit = COLOR_CRITICIDAD[nv.calificacion] || "#555";
+
+    const itemsTimeline = [
+      `<div class="tl-item">
+         <div class="tl-punto" style="background:#003366;"></div>
+         <div class="tl-fecha">${fmt(nv.fechaHora)}</div>
+         <div class="tl-caja tl-registro">
+           <div class="tl-autor">📢 Registro de la novedad — ${esc(creador)}</div>
+           <div class="tl-texto">${esc(nv.titulo)}</div>
+         </div>
+       </div>`,
+      ...comentarios.map(c => `
+       <div class="tl-item">
+         <div class="tl-punto" style="background:${colorDeUsuario(c.autor)};"></div>
+         <div class="tl-fecha">${fmt(c.fechaHora)}</div>
+         <div class="tl-caja">
+           <div class="tl-autor" style="color:${colorDeUsuario(c.autor)};">💬 ${esc(c.autor || "Anónimo")}${c.editadoEn ? ' <span class="tl-editado">(editado)</span>' : ""}</div>
+           <div class="tl-texto">${esc(c.texto)}</div>
+         </div>
+       </div>`)
+    ].join("");
+
+    const contenido = `
+      <style>
+        #informeNovedadCaptura { width:820px; font-family:Segoe UI, Arial, sans-serif; color:#1f2933; background:#fff; }
+        #informeNovedadCaptura .enc { background:#003366; color:#fff; padding:22px 30px; }
+        #informeNovedadCaptura .enc .org { font-size:12px; letter-spacing:2px; opacity:.85; }
+        #informeNovedadCaptura .enc h1 { margin:6px 0 4px; font-size:24px; letter-spacing:1px; }
+        #informeNovedadCaptura .enc .sub { font-size:12.5px; opacity:.9; }
+        #informeNovedadCaptura .cuerpo { padding:22px 30px 10px; }
+        #informeNovedadCaptura h2 { background:none; box-shadow:none; border-radius:0; font-size:14px; color:#003366; text-transform:uppercase; letter-spacing:1px;
+          border-bottom:2px solid #003366; padding:0 0 4px; margin:18px 0 10px; }
+        #informeNovedadCaptura .titulo-nv { font-size:20px; font-weight:700; color:#003366; margin:0 0 6px; }
+        #informeNovedadCaptura .badge { display:inline-block; color:#fff; font-size:12px; font-weight:700;
+          border-radius:12px; padding:3px 12px; }
+        #informeNovedadCaptura table { width:100%; border-collapse:collapse; font-size:13px; }
+        #informeNovedadCaptura td { border:1px solid #d7dee6; padding:7px 10px; vertical-align:top; }
+        #informeNovedadCaptura td.k { background:#f1f5f9; font-weight:700; color:#334; width:30%; }
+        #informeNovedadCaptura .kpis { display:flex; gap:10px; }
+        #informeNovedadCaptura .kpi { flex:1; border:1px solid #d7dee6; border-top:4px solid #003366; border-radius:6px;
+          padding:10px; text-align:center; }
+        #informeNovedadCaptura .kpi b { display:block; font-size:22px; color:#003366; }
+        #informeNovedadCaptura .kpi span { font-size:11.5px; color:#556; }
+        #informeNovedadCaptura .resumen { font-size:13.5px; line-height:1.6; background:#f8fafc; border-left:4px solid #003366;
+          padding:10px 14px; white-space:pre-wrap; }
+        #informeNovedadCaptura .timeline { position:relative; margin-left:170px; padding-left:22px; border-left:3px solid #c5d3e3; }
+        #informeNovedadCaptura .tl-item { position:relative; margin-bottom:14px; }
+        #informeNovedadCaptura .tl-punto { position:absolute; left:-31px; top:6px; width:15px; height:15px; border-radius:50%;
+          border:3px solid #fff; box-shadow:0 0 0 1px #c5d3e3; }
+        #informeNovedadCaptura .tl-fecha { position:absolute; left:-192px; top:4px; width:150px; text-align:right;
+          font-size:11.5px; font-weight:700; color:#556; }
+        #informeNovedadCaptura .tl-caja { background:#f4f6f9; border-radius:8px; padding:8px 12px; }
+        #informeNovedadCaptura .tl-registro { background:#e3ecf7; }
+        #informeNovedadCaptura .tl-autor { font-size:12.5px; font-weight:700; color:#003366; margin-bottom:2px; }
+        #informeNovedadCaptura .tl-editado { font-weight:400; font-style:italic; color:#888; }
+        #informeNovedadCaptura .tl-texto { font-size:13px; white-space:pre-wrap; word-break:break-word; }
+        #informeNovedadCaptura .vacio { font-size:13px; color:#778; font-style:italic; }
+        #informeNovedadCaptura .firma { margin-top:40px; text-align:center; font-size:13px; }
+        #informeNovedadCaptura .firma .linea { width:260px; border-top:1px solid #333; margin:0 auto 6px; }
+        #informeNovedadCaptura .pie { margin-top:22px; background:#f1f5f9; color:#667; font-size:11px; padding:10px 30px;
+          display:flex; justify-content:space-between; }
+      </style>
+      <div class="enc">
+        <div class="org">SICHECK MANAGUA · MONITOREO TI</div>
+        <h1>INFORME EJECUTIVO DE NOVEDAD</h1>
+        <div class="sub">Jornada ${esc(String(obtenerDiaDelAnioDe(nv.fechaHora)))} · Turno ${turnoNv.esDiurno ? "Diurno" : "Nocturno"} · Registrada el ${fmt(nv.fechaHora)}</div>
+      </div>
+      <div class="cuerpo">
+        <div class="titulo-nv">${esc(nv.titulo)}</div>
+        <span class="badge" style="background:${colorCrit};">${renderEstrellasDisplay(nv.calificacion)}  ${(NOMBRES_CALIFICACION[nv.calificacion] || "").toUpperCase()}</span>
+
+        <h2>1. Datos generales</h2>
+        <table>
+          <tr><td class="k">Título</td><td>${esc(nv.titulo)}</td></tr>
+          <tr><td class="k">Nivel de criticidad</td><td>${nv.calificacion}/5 — ${NOMBRES_CALIFICACION[nv.calificacion] || "—"}</td></tr>
+          <tr><td class="k">Fecha y hora de registro</td><td>${fmt(nv.fechaHora)}</td></tr>
+          <tr><td class="k">Registrada por</td><td>${esc(creador)}</td></tr>
+          <tr><td class="k">Turno</td><td>${turnoNv.esDiurno ? "Diurno" : "Nocturno"} (${formatoRangoHora(turnoNv.inicio)} – ${formatoRangoHora(turnoNv.fin)})</td></tr>
+          <tr><td class="k">Última actualización</td><td>${fmt(ultimaFecha)}</td></tr>
+        </table>
+
+        <h2>2. Resumen ejecutivo</h2>
+        <div class="resumen">${esc(nv.descripcion || "Sin descripción.")}</div>
+
+        <h2>3. Indicadores de seguimiento</h2>
+        <div class="kpis">
+          <div class="kpi"><b>${comentarios.length}</b><span>Comentarios</span></div>
+          <div class="kpi"><b>${participantes.length}</b><span>Analistas participantes</span></div>
+          <div class="kpi"><b>${(nv.leidoPor || []).length}</b><span>Analistas que la leyeron</span></div>
+          <div class="kpi"><b>${duracion}</b><span>Duración del seguimiento</span></div>
+        </div>
+        <table style="margin-top:10px;">
+          <tr><td class="k">Participantes</td><td>${participantes.map(esc).join(", ")}</td></tr>
+          <tr><td class="k">Leída por</td><td>${(nv.leidoPor || []).map(esc).join(", ") || "—"}</td></tr>
+          <tr><td class="k">Reacciones</td><td>${textoReacciones}</td></tr>
+        </table>
+
+        <h2>4. Línea de tiempo</h2>
+        ${comentarios.length ? "" : '<div class="vacio" style="margin-bottom:10px;">La novedad no registra comentarios de seguimiento.</div>'}
+        <div class="timeline">${itemsTimeline}</div>
+
+        <div class="firma">
+          <div class="linea"></div>
+          <b>Jorge Quintana</b><br>Jefe de Monitoreo TI
+        </div>
+      </div>
+      <div class="pie">
+        <span>Generado por ${esc(window.usuarioSeleccionado)} el ${fmt(new Date().toISOString())}</span>
+        <span>SiCheck Managua — Documento interno</span>
+      </div>`;
+
+    const captura = document.createElement("div");
+    captura.id = "informeNovedadCaptura";
+    captura.style.cssText = "position:fixed; left:-20000px; top:0; z-index:-1;";
+    captura.innerHTML = contenido;
+    document.body.appendChild(captura);
+    descargarInformeNovedad.enCurso = true;
+
+    // Igual que el Informe de turno: scale 5, reducida si el informe es muy
+    // largo para no superar el tamaño máximo de canvas del navegador.
+    const anchoCss = captura.scrollWidth;
+    const altoCss = captura.scrollHeight;
+    const escala = Math.min(5, 32000 / anchoCss, 32000 / altoCss, Math.sqrt(260000000 / (anchoCss * altoCss)));
+    const terminar = () => { captura.remove(); descargarInformeNovedad.enCurso = false; };
+
+    html2canvas(captura, {
+      scale: escala, useCORS: true, backgroundColor: "#ffffff",
+      width: anchoCss, height: altoCss, windowWidth: anchoCss, windowHeight: altoCss, scrollX: 0, scrollY: 0,
+      onclone: doc => { const el = doc.getElementById("informeNovedadCaptura"); if (el) el.style.left = "0px"; }
+    }).then(canvas => {
+      canvas.toBlob(blob => {
+        if (!blob) { alert("No se pudo generar la imagen del informe."); terminar(); return; }
+        const nombre = `Informe-Novedad-${nv.titulo.slice(0, 40)}-${new Date(nv.fechaHora).toISOString().slice(0, 10)}.png`
+          .replace(/[\\/:*?"<>|\s]+/g, "_");
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.download = nombre;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        terminar();
+      }, "image/png");
+    }).catch(err => {
+      console.error("Error al generar el informe de la novedad:", err);
+      alert("Ocurrió un error al generar el informe de la novedad.");
+      terminar();
+    });
+  };
+
+  // Número de jornada (día del año) de una fecha dada; igual que
+  // obtenerDiaDelAnio(), antes de las 08:00 pertenece al día anterior.
+  function obtenerDiaDelAnioDe(iso) {
+    const d = new Date(iso);
+    if (d.getHours() < 8) d.setDate(d.getDate() - 1);
+    const inicio = new Date(d.getFullYear(), 0, 0);
+    return Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - inicio) / 86400000);
   }
 
   /* ---------- Historial completo ---------- */
@@ -7257,28 +7524,19 @@ function validarVista247(numeroVista){
 
     let novedades = cargarNovedades().sort((a, b) => ultimaActividad(b) - ultimaActividad(a));
 
-    // 🔁 Evitar duplicar visualmente los eventos que ya se muestran arriba en
-    // "Novedades del turno anterior". Solo se excluyen en la vista por defecto;
-    // si el analista busca activamente, sí se incluyen (búsqueda completa).
-    if (!hayFiltroActivo && typeof obtenerTurnoAnterior === "function") {
-      const anterior = obtenerTurnoAnterior();
-      novedades = novedades.filter(nv => {
-        const t = new Date(nv.fechaHora).getTime();
-        return !(t >= anterior.inicio.getTime() && t < anterior.fin.getTime());
-      });
-    }
-
+    // 🔍 La búsqueda abarca título, descripción y el texto de los comentarios.
     if (busqueda) {
       novedades = novedades.filter(nv =>
-        nv.titulo.toLowerCase().includes(busqueda) ||
-        nv.descripcion.toLowerCase().includes(busqueda)
+        (nv.titulo || "").toLowerCase().includes(busqueda) ||
+        (nv.descripcion || "").toLowerCase().includes(busqueda) ||
+        (nv.comentarios || []).some(c => (c.texto || "").toLowerCase().includes(busqueda))
       );
     }
 
     if (novedades.length === 0) {
       cont.innerHTML = hayFiltroActivo
         ? `<div class="novedad-vacio">No hay novedades que coincidan.</div>`
-        : `<div class="novedad-vacio">No hay más novedades en el historial (las del turno anterior se muestran arriba).</div>`;
+        : `<div class="novedad-vacio">Aún no hay novedades registradas.</div>`;
       return;
     }
     const vistas = marcarComoVistas(novedades);
@@ -7642,7 +7900,6 @@ function validarVista247(numeroVista){
     guardarNovedadesArray(novedades);
 
     cerrarFormNovedad();
-    renderResumenTurnoAnterior();
     renderHistorialNovedades();
 
     // 🔝 Subir la página para mostrar la novedad recién creada (queda de
@@ -7654,7 +7911,6 @@ function validarVista247(numeroVista){
 
   /* ---------- Exponer para refrescar tras login (ver hook en verificarCredenciales) ---------- */
   window.actualizarNovedadesUI = function () {
-    renderResumenTurnoAnterior();
     renderHistorialNovedades();
   };
 
@@ -7729,6 +7985,7 @@ function validarVista247(numeroVista){
       const novedadId = panel.id.slice("comentarios-".length);
       // No interrumpir si ese comentario se está editando justo ahora
       if (comentarioEnEdicion && comentarioEnEdicion.novedadId === novedadId) return;
+      if (fechaComentarioEnEdicion && fechaComentarioEnEdicion.novedadId === novedadId) return;
       const nv = novedades.find(n => n.id === novedadId);
       if (!nv) return;
       const lista = document.getElementById(`comentarios-lista-${novedadId}`);
@@ -7748,23 +8005,6 @@ function validarVista247(numeroVista){
   /* ---------- Inicialización ---------- */
   document.addEventListener("DOMContentLoaded", function () {
     window.actualizarNovedadesUI();
-    // Mantener el resumen del turno anterior actualizado si el analista
-    // deja la pantalla abierta cerca del cambio de turno.
-    // Solo redibuja si cambió el rango del turno anterior o los datos, y nunca
-    // mientras se edita un comentario.
-    let firmaTurnoAnterior = "";
-    const firmaActual = () => {
-      const { inicio } = obtenerTurnoAnterior();
-      return inicio.getTime() + "|" + (localStorage.getItem(STORAGE_NOVEDADES) || "");
-    };
-    firmaTurnoAnterior = firmaActual();
-    setInterval(() => {
-      if (comentarioEnEdicion) return;
-      const firma = firmaActual();
-      if (firma === firmaTurnoAnterior) return;
-      firmaTurnoAnterior = firma;
-      renderResumenTurnoAnterior();
-    }, 60000);
     // Mantener "editado hace X minutos" y la disponibilidad de "editar"
     // al día en los comentarios que el analista tiene abiertos en pantalla.
     setInterval(actualizarComentariosAbiertosPeriodicamente, 20000);
