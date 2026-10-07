@@ -2136,10 +2136,14 @@ const STORAGE_KEY_DASHBOARD = "soc_dashboard_data";
 let seguridadEvaluada = false;
 </script>
 
-<!-- Librería html2canvas -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<!-- Librería jsPDF (informe de novedad en PDF) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Librerías para generar los informes (PNG/PDF). Se cargan desde los
+     archivos locales html2canvas.min.js y jspdf.umd.min.js (junto a este
+     HTML), así funcionan SIN internet. Solo si esos archivos no están, se
+     intenta descargarlas de internet como respaldo. -->
+<script src="html2canvas.min.js"></script>
+<script>window.html2canvas || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>');</script>
+<script src="jspdf.umd.min.js"></script>
+<script>(window.jspdf && window.jspdf.jsPDF) || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>');</script>
 
 
 <!-- VISTA LOGIN (diseño estilo ESET: marca a la izquierda, acceso a la derecha) -->
@@ -3185,7 +3189,7 @@ function generarInformePNG() {
   // refrescar. Ahora el informe se arma fuera de pantalla en la misma
   // página y se descarga como PNG con html2canvas — sin ventanas ni print().
   if (typeof html2canvas !== "function") {
-    alert("No se pudo generar el informe: la librería html2canvas no está disponible.");
+    alert("No se pudo generar el informe: la librería html2canvas no está disponible. Verifica que el archivo html2canvas.min.js esté en la misma carpeta que este HTML.");
     return;
   }
 
@@ -6774,11 +6778,11 @@ function iniciarSistemaPausaActiva(){
 
   function generarInformeNovedad(id, formato) {
     if (typeof html2canvas !== "function") {
-      alert("No se pudo generar el informe: la librería html2canvas no está disponible.");
+      alert("No se pudo generar el informe: la librería html2canvas no está disponible. Verifica que el archivo html2canvas.min.js esté en la misma carpeta que este HTML.");
       return;
     }
     if (formato === "pdf" && !(window.jspdf && window.jspdf.jsPDF)) {
-      alert("No se pudo generar el PDF: la librería jsPDF no está disponible. Revisa la conexión a internet o descárgalo en PNG.");
+      alert("No se pudo generar el PDF: la librería jsPDF no está disponible. Verifica que el archivo jspdf.umd.min.js esté en la misma carpeta que este HTML, o descárgalo en PNG.");
       return;
     }
     if (generarInformeNovedad.enCurso) return;
