@@ -1576,39 +1576,13 @@ input[type="password"]:focus {
   vertical-align: middle; /* Lo alinea con el texto */
 }
 
-#selectorNombres {
-  position: fixed;
-  bottom: 15px;
-  left: 15px;
-  width: 220px;
-  padding: 12px 14px;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f9fbff, #e6f0ff);
-  font-size: 15px;
-  font-weight: 500;
-  color: #333;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-  transition: all 0.35s ease;
-  z-index: 10000;
-  cursor: pointer;
-}
+
 
 /* Efecto hover elegante */
-#selectorNombres:hover {
-  background: linear-gradient(135deg, #ffffff, #d9ecff);
-  border-color: #007BFF;
-  box-shadow: 0 0 15px rgba(0,123,255,0.6);
-  transform: translateY(-3px) scale(1.03);
-}
+
 
 /* Cuando recibe foco (click o tab) */
-#selectorNombres:focus {
-  outline: none;
-  border-color: #3399ff;
-  box-shadow: 0 0 12px rgba(51,153,255,0.6);
-  transform: scale(1.02);
-}
+
 
 /* Animación sutil al cargar */
 @keyframes fadeInSlide {
@@ -1622,33 +1596,236 @@ input[type="password"]:focus {
   }
 }
 
-#selectorNombres {
-  animation: fadeInSlide 0.6s ease;
+
+
+/* ============================================================
+   🔐 LOGIN — estilo ESET (turquesa #00949F, blanco y gris oscuro)
+   Izquierda: marca SiCheck sobre fondo turquesa. Derecha: acceso.
+   ============================================================ */
+#loginContainer {
+  --eset-turquesa: #00949F;
+  --eset-turquesa-osc: #007A83;
+  --eset-turquesa-prof: #005F66;
+  --eset-texto: #1F2A30;
+  --eset-gris: #5E6B73;
+  --eset-borde: #C9D3D8;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  z-index: 9999;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #ffffff;
 }
-
-
+.login-marca {
+  position: relative;
+  flex: 1.35;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--eset-turquesa) 0%, var(--eset-turquesa-osc) 55%, var(--eset-turquesa-prof) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+.login-marca-formas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.login-marca-contenido {
+  position: relative;
+  text-align: center;
+  color: #ffffff;
+  max-width: 620px;
+  width: 100%;
+}
+.login-logo-tarjeta {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 26px 30px;
+  box-shadow: 0 18px 40px rgba(0, 40, 45, 0.35);
+}
+.login-logo {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.login-marca-titulo {
+  margin: 28px 0 6px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+}
+.login-marca-sub {
+  margin: 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.4px;
+}
+.login-acceso {
+  flex: 1;
+  min-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  background: #F4F7F8;
+}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: #ffffff;
+  border-top: 5px solid var(--eset-turquesa);
+  border-radius: 10px;
+  padding: 34px 32px 28px;
+  box-shadow: 0 10px 30px rgba(31, 42, 48, 0.12);
+}
+#loginContainer .login-card-titulo {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0 0 26px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--eset-texto);
+}
+.login-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--eset-texto);
+}
+#loginContainer .login-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--eset-texto);
+  border: 1.5px solid var(--eset-borde);
+  border-radius: 6px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.login-input::placeholder {
+  color: #93A0A7;
+}
+#loginContainer .login-input:focus {
+  outline: none;
+  border-color: var(--eset-turquesa);
+  box-shadow: 0 0 0 3px rgba(0, 148, 159, 0.18);
+}
+.login-analista {
+  margin-bottom: 18px;
+}
+/* Lista de coincidencias: ocupa espacio en el flujo (empuja la contraseña
+   hacia abajo) y solo aparece al hacer clic en el campo ANALISTA. */
+.login-lista {
+  display: none;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px 0;
+  border: 1px solid var(--eset-borde);
+  border-radius: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.login-lista.abierta {
+  display: block;
+}
+.login-lista li {
+  padding: 7px 12px;
+  font-size: 14px;
+  color: var(--eset-texto);
+  cursor: pointer;
+}
+.login-lista li.activa,
+.login-lista li:hover {
+  background: rgba(0, 148, 159, 0.12);
+  color: var(--eset-turquesa-prof);
+}
+.login-lista li mark {
+  background: none;
+  color: var(--eset-turquesa);
+  font-weight: 800;
+}
+.login-lista li.sin-resultados {
+  color: var(--eset-gris);
+  font-style: italic;
+  cursor: default;
+  background: none;
+}
+.login-clave {
+  position: relative;
+  margin-bottom: 24px;
+}
+#loginContainer .login-clave .login-input {
+  padding-right: 44px;
+}
+.login-ojo {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 6px;
+}
 #btnIngresar {
   width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #004080, #0066cc);
-  color: white;
+  padding: 13px;
+  background: var(--eset-turquesa);
+  color: #ffffff;
   font-size: 16px;
-  font-weight: bold;
+  font-weight: 800;
+  letter-spacing: 1.5px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
 }
-
 #btnIngresar:hover {
-  background: linear-gradient(135deg, #0066cc, #004080);
-  box-shadow: 0 6px 10px rgba(0,0,0,0.2);
+  background: var(--eset-turquesa-osc);
+  box-shadow: 0 6px 16px rgba(0, 122, 131, 0.35);
 }
-
- #btnIngresar:active {
+#btnIngresar:active {
   transform: scale(0.98);
- }
+}
+#mensajeError {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #FDECEC;
+  color: #B3261E;
+  font-size: 13.5px;
+  text-align: center;
+}
+.login-pie {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--eset-gris);
+  letter-spacing: 0.5px;
+}
+/* Pantallas angostas: la marca pasa arriba, el acceso debajo */
+@media (max-width: 860px) {
+  #loginContainer { flex-direction: column; overflow-y: auto; }
+  .login-marca { flex: none; padding: 28px 20px; }
+  .login-logo-tarjeta { padding: 14px 18px; }
+  .login-logo { max-width: 300px; }
+  .login-marca-titulo { font-size: 20px; margin-top: 16px; }
+  .login-acceso { flex: none; min-width: 0; padding: 24px 16px 32px; }
+}
 #VistaHome {
     padding: 5px;
   }
@@ -1965,88 +2142,69 @@ let seguridadEvaluada = false;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 
-<!-- VISTA LOGIN -->
+<!-- VISTA LOGIN (diseño estilo ESET: marca a la izquierda, acceso a la derecha) -->
 <div id="loginView">
+<div id="loginContainer">
 
-<div id="loginContainer" style="
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: url('fondo-login.jpg') no-repeat center center fixed;
-  background-size: cover;
-  margin: 0;
-  height: 100vh;
-  display: flex; align-items: center; justify-content: center;
-  z-index: 9999;
-">
+  <!-- Panel izquierdo: fondo turquesa ESET + logo SiCheck -->
+  <section class="login-marca">
+    <svg class="login-marca-formas" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <polygon points="0,0 520,0 300,800 0,800" fill="#ffffff" opacity="0.05"/>
+      <polygon points="430,0 800,0 800,330" fill="#ffffff" opacity="0.07"/>
+      <polygon points="800,520 800,800 470,800" fill="#003d44" opacity="0.25"/>
+      <circle cx="120" cy="690" r="160" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="40"/>
+    </svg>
+    <div class="login-marca-contenido">
+      <div class="login-logo-tarjeta">
+        <img src="sicheck-logo.png" alt="SiCheck" class="login-logo">
+      </div>
+      <h1 class="login-marca-titulo">Aplicación web de Monitoreo TI</h1>
+      <p class="login-marca-sub">Checklists de turno · Novedades · Llaves de turno</p>
+    </div>
+  </section>
 
+  <!-- Panel derecho: cuadro de inicio de sesión -->
+  <section class="login-acceso">
+    <div class="login-card">
+      <h2 class="login-card-titulo">INICIO DE SESIÓN</h2>
 
+      <label class="login-label" for="buscarAnalista">ANALISTA</label>
+      <div class="login-analista">
+        <input type="text" id="buscarAnalista" class="login-input" placeholder="Ingresa tu nombre" autocomplete="off"
+               role="combobox" aria-expanded="false" aria-controls="listaAnalistas" aria-autocomplete="list">
+        <ul id="listaAnalistas" class="login-lista" role="listbox"></ul>
+      </div>
 
-  <div style="
-    background: rgba(255, 255, 255, 0.45);
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.8);
-    max-width: 380px;
-    width: 100%;
-	max-height: 620px;
-    height: 100%;
-    overflow-y: auto;
-    text-align: center;
-  ">
+      <label class="login-label" for="clave">CONTRASEÑA</label>
+      <div class="login-clave">
+        <input type="password" id="clave" class="login-input" placeholder="Ingresa tu contraseña" autocomplete="off">
+        <button type="button" class="login-ojo" onclick="togglePassword()" aria-label="Mostrar u ocultar contraseña">👁️</button>
+      </div>
 
-  <!-- VISTA DEL LOGIN -->
-<!-- VISTA DEL LOGIN -->
-<div style="text-align: center; margin-bottom: 10px;">
-    <img src="SOC.png" alt="Icono de usuario" style="width: 370px; height: 200px;">
-	
-<h1 style="text-align: center; color: #003366; margin-bottom: 15px; font-size: 12px;">
-  <strong>APLICACIÓN WEB - MONITOREO TI</strong> 
-</h1>
-</div>
+      <button id="btnIngresar" onclick="verificarCredenciales()">INGRESAR</button>
+      <p id="mensajeError" style="display:none;"></p>
+    </div>
+    <div class="login-pie">SiCheck · Monitoreo TI</div>
+  </section>
 
-<h3 id="preguntaNombre" style="margin-bottom: 20px; font-size: 36px; font-weight: bold; color: #004080;">
- INICIAR SESIÓN
-</h3>
-     
- <div style="position: relative; margin-bottom: 10px;">
-	  
-  <input type="password" id="clave" placeholder="Contraseña"
-    style="width: 100%; padding: 8px 40px 8px 8px; box-sizing: border-box;" />
-  <button type="button" onclick="togglePassword()" 
-    style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
-           background: transparent; border: none; cursor: pointer; font-size: 16px;">
-    👁️
-  </button>
-
-</div>
-
-
-
-
-<button id="btnIngresar" onclick="verificarCredenciales()">
-  Ingresar
-</button>
-
-    <p id="mensajeError" style="color: red; margin-top: 10px; display: none;"></p>
-  </div>
-  
- <select id="selectorNombres" >
-  <option value="" disabled selected>👨🏻‍💻Selecciona tu usuario</option>
+  <!-- Lista real de usuarios (oculta): la usa el resto del sistema.
+       El buscador de "ANALISTA" la consulta y le asigna el valor elegido. -->
+  <select id="selectorNombres" hidden>
+    <option value="" disabled selected>Selecciona tu usuario</option>
     <option value="Jorge Quintana">Jorge Quintana</option>
     <option value="César Oporta">César Oporta</option>
     <option value="Guido Sánchez">Guido Sánchez</option>
     <option value="Isidra Méndez">Isidra Méndez</option>
-	<option value="Josué Ortega">Josué Ortega</option>
+    <option value="Josué Ortega">Josué Ortega</option>
     <option value="Josué Pérez">Josué Pérez</option>
     <option value="Kevin Silva">Kevin Silva</option>
     <option value="Luis Moreno">Luis Moreno</option>
     <option value="Norberto Olivares">Norberto Olivares</option>
     <option value="Oscar Hidalgo">Oscar Hidalgo</option>
     <option value="Osneilling Ramírez">Osneilling Ramírez</option>
- </select>
+  </select>
 
-
-</div>  
+</div>
 </div>  <!-- fin loginView -->
 
 
@@ -4406,7 +4564,7 @@ function verificarCredenciales() {
 
   // Validar selección de usuario
   if (!usuario) {
-    mensaje.innerHTML = "⚠️<strong>Primero selecciona tu usuario</strong>";
+    mensaje.innerHTML = "⚠️<strong>Primero elige tu nombre en ANALISTA</strong>";
     mensaje.style.display = "block";
     return;
   }
@@ -4983,6 +5141,117 @@ function togglePassword() {
   const campo = document.getElementById("clave");
   campo.type = campo.type === "password" ? "text" : "password";
 }
+
+// 🔎 Campo ANALISTA del login: buscador con lista de coincidencias.
+// - La lista solo aparece al hacer clic (o enfocar) el campo; mientras no,
+//   la contraseña queda justo debajo del campo ANALISTA.
+// - Al escribir, las coincidencias se van filtrando (sin importar tildes
+//   ni mayúsculas); las que empiezan igual aparecen primero.
+// - Al elegir un nombre, la lista desaparece y la contraseña vuelve a
+//   quedar junto al campo. El nombre elegido se asigna al <select> oculto
+//   #selectorNombres, que es el que usa el resto del sistema.
+(function () {
+  const input = document.getElementById("buscarAnalista");
+  const lista = document.getElementById("listaAnalistas");
+  const selector = document.getElementById("selectorNombres");
+  if (!input || !lista || !selector) return;
+
+  const nombres = Array.from(selector.options).map(o => o.value).filter(Boolean);
+  const normalizar = t => (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  let coincidencias = [];
+  let indiceActivo = -1;
+
+  function resaltar(nombre, texto) {
+    const n = normalizar(nombre);
+    const q = normalizar(texto);
+    const i = q ? n.indexOf(q) : -1;
+    if (i < 0) return nombre;
+    return nombre.slice(0, i) + "<mark>" + nombre.slice(i, i + q.length) + "</mark>" + nombre.slice(i + q.length);
+  }
+
+  function pintar() {
+    const q = normalizar(input.value);
+    coincidencias = nombres
+      .filter(n => normalizar(n).includes(q))
+      .sort((a, b) => {
+        // Primero los que empiezan con lo escrito (nombre o apellido).
+        const pa = normalizar(a).split(/\s+/).some(w => w.startsWith(q)) ? 0 : 1;
+        const pb = normalizar(b).split(/\s+/).some(w => w.startsWith(q)) ? 0 : 1;
+        return pa - pb || nombres.indexOf(a) - nombres.indexOf(b);
+      });
+    if (indiceActivo >= coincidencias.length) indiceActivo = coincidencias.length - 1;
+    lista.innerHTML = coincidencias.length
+      ? coincidencias.map((n, i) =>
+          `<li role="option" data-nombre="${n}" class="${i === indiceActivo ? "activa" : ""}">${resaltar(n, input.value)}</li>`).join("")
+      : `<li class="sin-resultados">Sin coincidencias</li>`;
+  }
+
+  function abrir() {
+    indiceActivo = -1;
+    pintar();
+    lista.classList.add("abierta");
+    input.setAttribute("aria-expanded", "true");
+  }
+
+  function cerrar() {
+    lista.classList.remove("abierta");
+    input.setAttribute("aria-expanded", "false");
+  }
+
+  function elegir(nombre) {
+    input.value = nombre;
+    selector.value = nombre;
+    cerrar();
+    document.getElementById("clave")?.focus();
+  }
+
+  input.addEventListener("click", abrir);
+  input.addEventListener("focus", abrir);
+  input.addEventListener("input", () => {
+    // Lo escrito ya no es un nombre elegido hasta que se seleccione uno.
+    selector.value = "";
+    if (!lista.classList.contains("abierta")) abrir();
+    indiceActivo = 0; // la primera coincidencia queda lista para Enter
+    pintar();
+  });
+
+  input.addEventListener("keydown", e => {
+    const abierta = lista.classList.contains("abierta");
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!abierta) abrir();
+      const paso = e.key === "ArrowDown" ? 1 : -1;
+      indiceActivo = Math.max(0, Math.min(coincidencias.length - 1, indiceActivo + paso));
+      pintar();
+      lista.querySelector("li.activa")?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter" && abierta) {
+      // Enter elige la coincidencia resaltada (no intenta iniciar sesión).
+      e.preventDefault();
+      e.stopPropagation();
+      const nombre = coincidencias[indiceActivo >= 0 ? indiceActivo : 0];
+      if (nombre) elegir(nombre);
+    } else if (e.key === "Escape") {
+      cerrar();
+    } else if (e.key === "Tab" && abierta && input.value && coincidencias.length === 1) {
+      elegir(coincidencias[0]);
+    }
+  });
+
+  // mousedown (antes del blur) para que el clic en la lista sí se registre.
+  lista.addEventListener("mousedown", e => {
+    const li = e.target.closest("li[data-nombre]");
+    if (!li) return;
+    e.preventDefault();
+    elegir(li.dataset.nombre);
+  });
+
+  input.addEventListener("blur", () => {
+    cerrar();
+    // Si lo escrito coincide exactamente con un nombre, se toma como elegido.
+    const exacto = nombres.find(n => normalizar(n) === normalizar(input.value));
+    if (exacto) { input.value = exacto; selector.value = exacto; }
+  });
+})();
 </script>
 
 
@@ -5047,15 +5316,6 @@ function iniciarChecklist() {
 
 </script>
 
-<script>
-  const selector = document.getElementById('selectorNombres');
-  const pregunta = document.getElementById('preguntaNombre');
-
-  selector.addEventListener('change', () => {
-    const nombreSeleccionado = selector.value;
-    pregunta.textContent = nombreSeleccionado || '¿Quién ingresa a turno?';
-  });
-</script>
 
 <script>
 document.addEventListener("keydown", function(e) {
