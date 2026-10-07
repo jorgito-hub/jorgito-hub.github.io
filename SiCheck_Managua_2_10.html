@@ -466,10 +466,20 @@ input[type="checkbox"]:checked::after {
   font-size:14px;
   margin-bottom:8px;
 }
+/* 🎨 Botón "Publicar Novedad" con el turquesa de ESET (#00949F) */
 #btnAgregarNovedad {
   padding:8px 14px;
   font-size:14px;
   max-width:220px;
+  background:#00949F;
+  color:#fff;
+  border-radius:6px;
+  letter-spacing:0.3px;
+}
+#btnAgregarNovedad:hover {
+  background:#fff;
+  color:#00949F;
+  box-shadow:0 0 0 2px #00949F inset, 0 6px 20px rgba(0,0,0,0.2);
 }
 .novedad-card {
   border:1px solid #e2e6ea;
@@ -491,7 +501,7 @@ input[type="checkbox"]:checked::after {
 }
 .novedad-titulo {
   font-weight:700;
-  color:#003366;
+  color:#00838D; /* turquesa ESET, un tono más profundo para leerse bien */
   font-size:14.5px;
 }
 .novedad-estrellas {
@@ -1881,6 +1891,16 @@ canvas[id^="firma"] {
 }
 
 
+.novedad-grupo-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #00949F;
+  border: 1px solid #00949F;
+  border-radius: 10px;
+  padding: 0 8px;
+  vertical-align: middle;
+}
 .novedad-autor {
   font-weight: 900;
   font-style: italic;
@@ -1910,6 +1930,31 @@ const STORAGE_KEY_DASHBOARD = "soc_dashboard_data";
 
   // variable global para almacenar el usuario (asegura que exista antes de cualquier función)
   window.usuarioSeleccionado = "";
+
+  // 👥 Perfiles de usuario: "LN" (León) para los analistas nuevos y "MG"
+  // (Managua) para los ya existentes. Jorge Quintana usa el perfil MG en
+  // horarios/clima, pero es el único que ve las novedades de ambos.
+  const USUARIOS_LN = ["César Oporta", "Norberto Olivares", "Isidra Méndez", "Guido Sánchez"];
+  function perfilDeUsuario(nombre) {
+    return USUARIOS_LN.includes(nombre) ? "LN" : "MG";
+  }
+  function perfilActual() {
+    return perfilDeUsuario(window.usuarioSeleccionado);
+  }
+
+  // 🔒 Visibilidad de novedades por grupo: cada novedad pertenece al grupo
+  // de quien la creó ("MG" o "LN"; las de Jorge Quintana pueden ser
+  // "TODOS"). Las novedades antiguas sin grupo se asignan según su creador.
+  // Solo Jorge Quintana ve las de ambos grupos.
+  function grupoDeNovedad(nv) {
+    return nv.grupo || perfilDeUsuario(nv.creadoPor || "");
+  }
+  function puedeVerNovedad(nv, usuario) {
+    if (!usuario) return false;
+    if (usuario === "Jorge Quintana") return true;
+    const grupo = grupoDeNovedad(nv);
+    return grupo === "TODOS" || grupo === perfilDeUsuario(usuario);
+  }
   // 🔹 Bandera global: indica si ya se evaluó la seguridad
 let seguridadEvaluada = false;
 </script>
@@ -1988,10 +2033,14 @@ let seguridadEvaluada = false;
  <select id="selectorNombres" >
   <option value="" disabled selected>👨🏻‍💻Selecciona tu usuario</option>
     <option value="Jorge Quintana">Jorge Quintana</option>
+    <option value="César Oporta">César Oporta</option>
+    <option value="Guido Sánchez">Guido Sánchez</option>
+    <option value="Isidra Méndez">Isidra Méndez</option>
 	<option value="Josué Ortega">Josué Ortega</option>
     <option value="Josué Pérez">Josué Pérez</option>
     <option value="Kevin Silva">Kevin Silva</option>
     <option value="Luis Moreno">Luis Moreno</option>
+    <option value="Norberto Olivares">Norberto Olivares</option>
     <option value="Oscar Hidalgo">Oscar Hidalgo</option>
     <option value="Osneilling Ramírez">Osneilling Ramírez</option>
  </select>
@@ -2114,6 +2163,15 @@ let seguridadEvaluada = false;
 
     <label for="inputDescNovedad">Descripción breve</label>
     <textarea id="inputDescNovedad" maxlength="300" placeholder="Ej: Corte de energía de 2 minutos en sala de servidores"></textarea>
+
+    <div id="bloqueGrupoNovedad" style="display:none;">
+      <label for="selectGrupoNovedad">Visible para</label>
+      <select id="selectGrupoNovedad" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:inherit; margin-bottom:8px;">
+        <option value="MG">Analistas de Managua (MG)</option>
+        <option value="LN">Analistas de León (LN)</option>
+        <option value="TODOS">Ambos grupos</option>
+      </select>
+    </div>
 
     <label>Calificación</label>
     <div id="estrellasInput" class="estrellas-input"></div>
@@ -3370,6 +3428,40 @@ const ETIQUETAS_REPORTES = {
 };
 const ETIQUETA_RESUMEN = { diurno: "03:55 p.m.", nocturno: "07:55 a.m." };
 
+// 👥 Horarios por perfil: el perfil León (LN) solo cambia el Reporte 1
+// (11:00 a.m. diurno / 07:00 p.m. nocturno); Reportes 2 y 3 e Informe son
+// iguales a Managua (MG). Se aplica al iniciar sesión.
+const REPORTE1_POR_PERFIL = {
+  MG: { rangos: [{ inicio: 8 * 60 + 15, fin: 8 * 60 + 45 }, { inicio: 16 * 60 + 15, fin: 16 * 60 + 45 }],
+        etiquetas: ["08:15 a.m.", "04:15 p.m."] },
+  LN: { rangos: [{ inicio: 11 * 60, fin: 11 * 60 + 30 }, { inicio: 19 * 60, fin: 19 * 60 + 30 }],
+        etiquetas: ["11:00 a.m.", "07:00 p.m."] }
+};
+function aplicarPerfilHorarios(perfil) {
+  const conf = REPORTE1_POR_PERFIL[perfil] || REPORTE1_POR_PERFIL.MG;
+  horarios.btnCHECK1 = conf.rangos;
+  ETIQUETAS_REPORTES.diurno[0] = conf.etiquetas[0];
+  ETIQUETAS_REPORTES.nocturno[0] = conf.etiquetas[1];
+  if (typeof actualizarBotonesCheck === "function") actualizarBotonesCheck();
+}
+
+// 🗝️ Hasta cuándo puede el usuario usar Entregar Llave:
+// - MG: fin de SU turno (Diurno/Nocturno) + 15 minutos de gracia.
+// - LN: turno de 24 horas que inicia a las 08:00; se deshabilita una sola
+//   vez, a las 10:00 a.m. del día siguiente al inicio de su jornada.
+function calcularLimiteEntregaLlave(usuario, ahora) {
+  if (perfilDeUsuario(usuario) === "LN") {
+    const inicioJornada = new Date(ahora);
+    if (ahora.getHours() < 8) inicioJornada.setDate(inicioJornada.getDate() - 1);
+    const limite = new Date(inicioJornada);
+    limite.setDate(limite.getDate() + 1);
+    limite.setHours(10, 0, 0, 0);
+    return limite.getTime();
+  }
+  if (typeof obtenerLimitesTurno !== "function") return null;
+  return obtenerLimitesTurno(ahora).fin.getTime() + 15 * 60 * 1000;
+}
+
 function actualizarEtiquetasHorarioBotones() {
   const ahora = new Date();
   const minutosTotales = ahora.getHours() * 60 + ahora.getMinutes();
@@ -3515,12 +3607,13 @@ if (!enHorario) {
   // reloj general del sitio.
   const btnEntregar = document.getElementById("btnEntregarLlave");
   if (btnEntregar) {
-    const GRACIA_ENTREGA_MS = 15 * 60 * 1000;
-    const sinLimiteConocido = !window.turnoUsuarioFinMs;
-    const dentroDePlazo = sinLimiteConocido || (Date.now() <= window.turnoUsuarioFinMs + GRACIA_ENTREGA_MS);
+    const sinLimiteConocido = !window.entregaLlaveLimiteMs;
+    const dentroDePlazo = sinLimiteConocido || (Date.now() <= window.entregaLlaveLimiteMs);
     btnEntregar.disabled = !dentroDePlazo;
     if (!dentroDePlazo) {
-      btnEntregar.setAttribute("data-tooltip", "Tu turno ya terminó hace más de 15 minutos — ya no puedes entregar la llave.");
+      btnEntregar.setAttribute("data-tooltip", perfilActual() === "LN"
+        ? "Tu turno de 24 horas ya terminó (10:00 a.m.) — ya no puedes entregar la llave."
+        : "Tu turno ya terminó hace más de 15 minutos — ya no puedes entregar la llave.");
     } else {
       btnEntregar.removeAttribute("data-tooltip");
     }
@@ -4304,8 +4397,10 @@ actualizarHeaderHome();
 function verificarCredenciales() {
   // Obtener valores del formulario de login
   const usuario = document.getElementById("selectorNombres").value.trim();
-  // 🔑 Jorge Quintana tiene su propia clave; el resto usa la clave general.
-  const claveCorrecta = usuario === "Jorge Quintana" ? "250689" : "Soc2026*";
+  // 🔑 Jorge Quintana tiene su propia clave; los analistas de León (LN) y
+  // los de Managua (MG) tienen cada grupo la suya.
+  const claveCorrecta = usuario === "Jorge Quintana" ? "250689"
+    : (perfilDeUsuario(usuario) === "LN" ? "LN2026*" : "MG2026*");
   const clave = document.getElementById("clave").value.trim();
   const mensaje = document.getElementById("mensajeError");
 
@@ -4330,13 +4425,13 @@ function verificarCredenciales() {
   // Guardar estado de sesión
   localStorage.setItem("sesionActiva", "true");
 
-  // 🗝️ Recordar hasta cuándo dura EL TURNO DE ESTE USUARIO (no el reloj
-  // general del sitio): Entregar Llave sigue habilitado durante todo su
-  // turno + 15 minutos de gracia después, sin importar que el reloj ya
-  // haya cambiado de turno para todos los demás.
-  if (typeof obtenerLimitesTurno === "function") {
-    window.turnoUsuarioFinMs = obtenerLimitesTurno(new Date()).fin.getTime();
-  }
+  // 👥 Horarios de los Reportes según el perfil del usuario (MG / LN).
+  aplicarPerfilHorarios(perfilDeUsuario(usuario));
+
+  // 🗝️ Recordar hasta cuándo puede ESTE USUARIO entregar la llave (según
+  // su propio turno, no el reloj general del sitio). Ver
+  // calcularLimiteEntregaLlave() para las reglas de MG y LN.
+  window.entregaLlaveLimiteMs = calcularLimiteEntregaLlave(usuario, new Date());
 
   // ☕ Pausa activa: arranca justo ahora (no antes de iniciar sesión) y el
   // conteo de 72 minutos empieza desde este momento, no desde un valor
@@ -4397,6 +4492,18 @@ function revisarRecordatorioRelevo() {
   const ahora = new Date();
   const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
 
+  // 👥 Perfil LN (turno de 24 h): el aviso sale UNA sola vez, a las 9:50 a.m.
+  // del final de su jornada (10 minutos antes de que se cierre Entregar Llave).
+  if (perfilActual() === "LN") {
+    const limite = window.entregaLlaveLimiteMs;
+    if (!limite || ahora.getTime() < limite - 10 * 60 * 1000 || ahora.getTime() >= limite) return;
+    const claveLN = `LN-${limite}`;
+    if (sessionStorage.getItem("recordatorioRelevoMostrado") === claveLN) return;
+    sessionStorage.setItem("recordatorioRelevoMostrado", claveLN);
+    document.getElementById("modalRelevo").style.display = "flex";
+    return;
+  }
+
   HORARIOS_RELEVO.forEach(({ h, m }) => {
     const inicio = h * 60 + m;
     if (minutosAhora < inicio || minutosAhora >= inicio + 20) return;
@@ -4450,6 +4557,12 @@ function construirDatosLlaveTurno(forzada) {
     const key = localStorage.key(i);
     payload[key] = localStorage.getItem(key);
   }
+  // 🔒 La llave solo lleva las novedades que quien la genera puede ver: un
+  // analista de un grupo nunca exporta novedades del otro grupo.
+  try {
+    const todas = JSON.parse(payload["novedadesTI_v1"] || "[]");
+    payload["novedadesTI_v1"] = JSON.stringify(todas.filter(nv => puedeVerNovedad(nv, window.usuarioSeleccionado)));
+  } catch (e) {}
 
   const fechaArchivo = limites.inicio.toISOString().slice(0, 10);
   const usuarioArchivo = sanitizarNombreArchivo(metadata.generadoPor);
@@ -4670,6 +4783,18 @@ function recibirLlaveDeTurno(inputFile) {
       return;
     }
 
+    // 🔒 Los grupos MG (Managua) y LN (León) no intercambian llaves entre
+    // sí: así ninguna llave puede forzar la visualización de novedades del
+    // otro grupo. Jorge Quintana puede recibir y generar llaves para ambos.
+    const receptor = window.usuarioSeleccionado || "";
+    const emisor = meta.generadoPor || "";
+    if (receptor !== "Jorge Quintana" && emisor !== "Jorge Quintana" &&
+        perfilDeUsuario(emisor) !== perfilDeUsuario(receptor)) {
+      alert(`⚠️ Esta llave fue generada por ${emisor || "?"}, que pertenece a otro grupo de analistas. Solo puedes recibir llaves de tu propio grupo.`);
+      inputFile.value = "";
+      return;
+    }
+
     const payload = datos.payload || null;
     if (payload) {
       try {
@@ -4714,6 +4839,8 @@ function recibirLlaveDeTurno(inputFile) {
         let novedadesEntrante = [];
         try { novedadesLocal = JSON.parse(localStorage.getItem(CLAVE_NOVEDADES) || "[]"); } catch (e) {}
         try { novedadesEntrante = JSON.parse(payload[CLAVE_NOVEDADES] || "[]"); } catch (e) {}
+        // 🔒 Solo se importan las novedades que el receptor puede ver.
+        novedadesEntrante = novedadesEntrante.filter(nv => puedeVerNovedad(nv, receptor));
         let novedadesFusionadas = fusionarNovedades(novedadesLocal, novedadesEntrante);
 
         const idsEliminados = new Set(eliminadasFusionadas.map(el => el.id));
@@ -5470,9 +5597,16 @@ function resize() {
 
 
 
+// 📍 Coordenadas del clima según el perfil: Managua (MG) o León (LN).
+const COORDENADAS_CLIMA = {
+  MG: { lat: 12.12566, lon: -86.264814 },
+  LN: { lat: 12.433687, lon: -86.881589 }
+};
+
 function cargarClimaManagua(){
 
-  fetch("https://api.open-meteo.com/v1/forecast?latitude=12.12566&longitude=-86.264814&current_weather=true&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto")
+  const coord = COORDENADAS_CLIMA[perfilActual()] || COORDENADAS_CLIMA.MG;
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coord.lat}&longitude=${coord.lon}&current_weather=true&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto`)
   .then(response => response.json())
   .then(data => {
 
@@ -5868,7 +6002,11 @@ function iniciarSistemaPausaActiva(){
     "Oscar Hidalgo": "orangered",
     "Kevin Silva": "indigo",
     "Josué Ortega": "Olive",
-    "Jorge Quintana": "Red"
+    "Jorge Quintana": "Red",
+    "César Oporta": "DarkCyan",
+    "Norberto Olivares": "SaddleBrown",
+    "Isidra Méndez": "DarkViolet",
+    "Guido Sánchez": "DarkGoldenrod"
   };
   const COLOR_USUARIO_DEFECTO = "#0066cc";
   function colorDeUsuario(nombre) {
@@ -5921,7 +6059,7 @@ function iniciarSistemaPausaActiva(){
     return `
       <div class="novedad-card ${yaLeida ? "leida-por-mi" : ""}" data-id="${nv.id}">
         <div class="novedad-card-top">
-          <span class="novedad-titulo"><span id="novedad-titulo-${nv.id}">${renderTituloNovedadHTML(nv)}</span> <span class="novedad-autor">creado por ${escaparHTML(nv.creadoPor || nv.leidoPor?.[0] || "Desconocido")}</span></span>
+          <span class="novedad-titulo"><span id="novedad-titulo-${nv.id}">${renderTituloNovedadHTML(nv)}</span> <span class="novedad-autor">creado por ${escaparHTML(nv.creadoPor || nv.leidoPor?.[0] || "Desconocido")}</span>${esJorgeQuintana() ? ` <span class="novedad-grupo-tag">${({ MG: "📍 Managua", LN: "📍 León", TODOS: "📍 Ambos grupos" })[grupoDeNovedad(nv)]}</span>` : ""}</span>
           <span style="text-align:center;">
             <span class="novedad-estrellas" title="Calificación: ${nv.calificacion}/5">${renderEstrellasDisplay(nv.calificacion)}</span>
             <div class="novedad-nombre-calificacion">${NOMBRES_CALIFICACION[nv.calificacion] || ""}</div>
@@ -6654,7 +6792,10 @@ function iniciarSistemaPausaActiva(){
     const wrapper = inputBusqueda?.closest(".buscador-novedades-wrapper");
     if (wrapper) wrapper.classList.toggle("tiene-texto", busqueda.length > 0);
 
-    let novedades = cargarNovedades().sort((a, b) => ultimaActividad(b) - ultimaActividad(a));
+    // 🔒 Solo las novedades del grupo del usuario (Jorge Quintana ve todas).
+    let novedades = cargarNovedades()
+      .filter(nv => puedeVerNovedad(nv, window.usuarioSeleccionado))
+      .sort((a, b) => ultimaActividad(b) - ultimaActividad(a));
 
     // 🔍 La búsqueda abarca título, descripción y el texto de los comentarios.
     if (busqueda) {
@@ -6965,6 +7106,9 @@ function iniciarSistemaPausaActiva(){
     }
     document.getElementById("inputTituloNovedad").value = "";
     document.getElementById("inputDescNovedad").value = "";
+    // Solo Jorge Quintana elige para qué grupo publica.
+    const bloqueGrupo = document.getElementById("bloqueGrupoNovedad");
+    if (bloqueGrupo) bloqueGrupo.style.display = esJorgeQuintana() ? "block" : "none";
     calificacionSeleccionada = 0;
     renderEstrellasInput();
     document.getElementById("modalNovedad").style.display = "flex";
@@ -7024,7 +7168,11 @@ function iniciarSistemaPausaActiva(){
       leidoPor: usuario ? [usuario] : [],
       comentarios: [],
       reacciones: {},
-      creadoPor: usuario || "Desconocido"
+      creadoPor: usuario || "Desconocido",
+      // Grupo que podrá verla: el del creador; Jorge Quintana lo elige.
+      grupo: esJorgeQuintana()
+        ? (document.getElementById("selectGrupoNovedad")?.value || "MG")
+        : perfilDeUsuario(usuario)
     };
 
     const novedades = cargarNovedades();
@@ -7102,7 +7250,9 @@ function iniciarSistemaPausaActiva(){
       descripcion,
       calificacion,
       fechaHora: new Date().toISOString(),
-      leidoPor: usuario ? [usuario] : []
+      leidoPor: usuario ? [usuario] : [],
+      creadoPor: usuario || "Desconocido",
+      grupo: perfilDeUsuario(usuario)
     });
     guardarNovedadesArray(novedades);
   };
