@@ -98,7 +98,8 @@
   .date { font-size: .8rem; font-weight: 600; color: var(--muted); }
   .date .wd { display: none; }
   .shift { font-size: .78rem; border-radius: 6px; padding: 2px 6px; line-height: 1.3; }
-  .shift b { font-weight: 600; }
+  .shift b { font-weight: 600; white-space: nowrap; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: 0; border: 1px solid rgba(0,0,0,.25); }
   .shift.d { background: var(--day-bg); color: var(--day-text); }
   .shift.n { background: var(--night-bg); color: var(--night-text); }
   .shift.none { background: var(--off); color: var(--muted); }
@@ -157,8 +158,8 @@
     <p id="p-desc"></p>
     <p class="pattern" id="p-pattern"></p>
     <div class="legend">
-      <span><i class="sw" style="background:var(--day-bg)"></i>☀ Turno de día</span>
-      <span><i class="sw" style="background:var(--night-bg)"></i>☾ Turno de noche</span>
+      <span><i class="sw" style="background:var(--day-bg)"></i>☀ Turno de día · 08:00 – 16:00 (8 h)</span>
+      <span><i class="sw" style="background:var(--night-bg)"></i>☾ Turno de noche · 16:00 – 08:00 (16 h)</span>
     </div>
   </section>
 
@@ -175,49 +176,52 @@
 
 <script>
 const ALL = ["ARIEL", "OSNEILING", "RAFAEL", "LUIS", "OSCAR", "KEVIN"];
-const NIGHT_3 = ["ARIEL", "RAFAEL", "LUIS", "OSCAR", "KEVIN"];
+const COLORS = { ARIEL: "#f26b1d", OSNEILING: "#8b6fd8", RAFAEL: "#22b14c", LUIS: "#f2d41a", OSCAR: "#e3212b", KEVIN: "#1f6fd1" };
+const HOURS = { d: 8, n: 16 }; // día 08:00–16:00, noche 16:00–08:00
 const DAY_MS = 86400000;
 const mod = (a, n) => ((a % n) + n) % n;
+
+// Patrón base: el orden ARIEL, OSNEILING, RAFAEL, LUIS, OSCAR, KEVIN se reparte en grupos
+// (uno por día). Cada vuelta completa el grupo rota una posición, así quien hizo día pasa a noche.
+function grouped(n, size) {
+  const perPass = ALL.length / size;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const pass = Math.floor(i / perPass);
+    const grp = ALL.slice((i % perPass) * size, (i % perPass) * size + size);
+    const r = grp.map((_, j) => grp[mod(j + pass, size)]);
+    out.push({ day: [r[0]], night: r.slice(1) });
+  }
+  return out;
+}
 
 const PROPOSALS = {
   1: {
     title: "Propuesta 1 — 1 analista de día y 1 de noche",
-    desc: "Cada persona hace un turno de día, al día siguiente el turno de noche y luego descansa 4 días. Ciclo de 6 días: 2 turnos por persona.",
-    pattern: "Por persona: <code>Día → Noche → Libre → Libre → Libre → Libre</code>",
-    // day i: day = ALL[i], night = ALL[i-1]
-    build(n) {
-      const out = [];
-      for (let i = 0; i < n; i++) out.push({ day: [ALL[mod(i, 6)]], night: [ALL[mod(i - 1, 6)]] });
-      return out;
-    }
+    desc: "El orden se recorre en parejas día/noche. En la primera vuelta (3 días) el primero de cada pareja va de día y el segundo de noche; en la siguiente vuelta se invierten. Ciclo de 6 días: cada persona hace 1 día y 1 noche.",
+    pattern: "Vuelta 1: <code>ARIEL / OSNEILING</code> → <code>RAFAEL / LUIS</code> → <code>OSCAR / KEVIN</code> · Vuelta 2: <code>OSNEILING / ARIEL</code> → <code>LUIS / RAFAEL</code> → <code>KEVIN / OSCAR</code> (día / noche)",
+    build: n => grouped(n, 2)
   },
   2: {
     title: "Propuesta 2 — 1 analista de día y 2 de noche",
-    desc: "Cada persona hace un turno de día y luego dos noches seguidas, después descansa 3 días. Ciclo de 6 días: 3 turnos por persona.",
-    pattern: "Por persona: <code>Día → Noche → Noche → Libre → Libre → Libre</code>",
-    // day i: day = ALL[i], night = ALL[i-1], ALL[i-2]
-    build(n) {
-      const out = [];
-      for (let i = 0; i < n; i++) out.push({ day: [ALL[mod(i, 6)]], night: [ALL[mod(i - 1, 6)], ALL[mod(i - 2, 6)]] });
-      return out;
-    }
+    desc: "El mismo orden se recorre en grupos de 3 (1 día + 2 noches). En cada vuelta el grupo rota una posición, así todos pasan por día y por noche. Ciclo de 6 días: cada persona hace 1 día y 2 noches.",
+    pattern: "Vuelta 1: <code>ARIEL / OSNEILING, RAFAEL</code> → <code>LUIS / OSCAR, KEVIN</code> · Vuelta 2: <code>OSNEILING / RAFAEL, ARIEL</code> → <code>OSCAR / KEVIN, LUIS</code> · Vuelta 3: <code>RAFAEL / ARIEL, OSNEILING</code> → <code>KEVIN / LUIS, OSCAR</code> (día / noches)",
+    build: n => grouped(n, 3)
   },
   3: {
     title: "Propuesta 3 — Noche solo ARIEL, RAFAEL, LUIS, OSCAR y KEVIN",
-    desc: "La noche rota entre 5 analistas (cada uno cada 5 días). El día lo cubren los 6, priorizando a quien lleva menos turnos para equilibrar la carga; nadie trabaja de día si tiene noche ese mismo día o salió de noche ese día.",
-    pattern: "Noche: <code>ARIEL → RAFAEL → LUIS → OSCAR → KEVIN</code> · Día: los 6 en orden ARIEL → … → KEVIN, equilibrando el total de turnos",
+    desc: "Se mantiene el orden del patrón, saltando a OSNEILING en la noche. La noche rota entre 5 analistas; el día lo cubren los 6 en su orden. Si a alguien le toca de día pero tiene noche ese día o viene saliendo de noche, pasa el siguiente y él queda primero para el próximo día.",
+    pattern: "Día: <code>ARIEL → RAFAEL → OSCAR → OSNEILING → LUIS → KEVIN</code> · Noche: <code>LUIS → KEVIN → ARIEL → RAFAEL → OSCAR</code>",
     build(n) {
+      const DAY = ["ARIEL", "RAFAEL", "OSCAR", "OSNEILING", "LUIS", "KEVIN"];
+      const NIGHT = ["LUIS", "KEVIN", "ARIEL", "RAFAEL", "OSCAR"];
       const out = [];
-      const total = Object.fromEntries(ALL.map(p => [p, 0]));
-      let queue = ALL.slice();
+      let queue = DAY.slice();
       for (let i = 0; i < n; i++) {
-        const night = NIGHT_3[mod(i, 5)];
-        const prevNight = i > 0 ? NIGHT_3[mod(i - 1, 5)] : null;
-        const eligible = queue.filter(p => p !== night && p !== prevNight);
-        const min = Math.min(...eligible.map(p => total[p]));
-        const day = eligible.find(p => total[p] === min);
+        const night = NIGHT[mod(i, 5)];
+        const prevNight = i > 0 ? NIGHT[mod(i - 1, 5)] : null;
+        const day = queue.find(p => p !== night && p !== prevNight);
         queue = queue.filter(p => p !== day).concat(day);
-        total[day]++; total[night]++;
         out.push({ day: [day], night: [night] });
       }
       return out;
@@ -232,13 +236,14 @@ const parseISO = s => { const [y, m, d] = s.split("-").map(Number); return new D
 const dayIndex = (d, start) => Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())) / DAY_MS);
 
 const today = new Date();
-const state = { p: 1, start: toISO(new Date(today.getFullYear(), today.getMonth(), 1)), month: `${today.getFullYear()}-${pad(today.getMonth() + 1)}` };
+const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+const state = { p: 1, start: toISO(new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth(), 1 - mod(firstOfMonth.getDay() - 1, 7))), month: `${today.getFullYear()}-${pad(today.getMonth() + 1)}` };
 try {
-  const saved = JSON.parse(localStorage.getItem("turnos") || "{}");
+  const saved = JSON.parse(localStorage.getItem("turnos-v2") || "{}");
   Object.assign(state, saved);
 } catch (e) {}
 
-function save() { try { localStorage.setItem("turnos", JSON.stringify(state)); } catch (e) {} }
+function save() { try { localStorage.setItem("turnos-v2", JSON.stringify(state)); } catch (e) {} }
 
 function monthData() {
   const [y, m] = state.month.split("-").map(Number);
@@ -255,6 +260,9 @@ function monthData() {
   }
   return { first, rows };
 }
+
+const dot = p => `<i class="dot" style="background:${COLORS[p]}"></i>`;
+const names = list => list.map(p => `<b>${dot(p)}${p}</b>`).join(" ");
 
 function render() {
   const P = PROPOSALS[state.p];
@@ -285,8 +293,8 @@ function render() {
     const wd = date.toLocaleDateString("es", { weekday: "long" });
     c.innerHTML = `<div class="date"><span class="wd">${wd} </span>${date.getDate()}</div>`;
     if (shift) {
-      c.innerHTML += `<div class="shift d">☀ <b>${shift.day.join(", ")}</b></div>`;
-      c.innerHTML += `<div class="shift n">☾ <b>${shift.night.join(", ")}</b></div>`;
+      c.innerHTML += `<div class="shift d">☀ ${names(shift.day)}</div>`;
+      c.innerHTML += `<div class="shift n">☾ ${names(shift.night)}</div>`;
       shift.day.forEach(p => counts[p].d++);
       shift.night.forEach(p => counts[p].n++);
     } else {
@@ -296,8 +304,8 @@ function render() {
   });
 
   $("summary").innerHTML =
-    `<thead><tr><th>Analista</th><th class="num">Días</th><th class="num">Noches</th><th class="num">Total</th></tr></thead><tbody>` +
-    ALL.map(p => `<tr><td>${p}</td><td class="num">${counts[p].d}</td><td class="num">${counts[p].n}</td><td class="num">${counts[p].d + counts[p].n}</td></tr>`).join("") +
+    `<thead><tr><th>Analista</th><th class="num">Días</th><th class="num">Noches</th><th class="num">Total turnos</th><th class="num">Horas</th></tr></thead><tbody>` +
+    ALL.map(p => `<tr><td>${dot(p)}${p}</td><td class="num">${counts[p].d}</td><td class="num">${counts[p].n}</td><td class="num">${counts[p].d + counts[p].n}</td><td class="num">${counts[p].d * HOURS.d + counts[p].n * HOURS.n} h</td></tr>`).join("") +
     `</tbody>`;
   save();
 }
@@ -316,7 +324,7 @@ $("prev").addEventListener("click", () => shiftMonth(-1));
 $("next").addEventListener("click", () => shiftMonth(1));
 $("csv").addEventListener("click", () => {
   const { rows } = monthData();
-  const lines = ["Fecha;Turno de día;Turno de noche"];
+  const lines = ["Fecha;Turno de día (08:00-16:00);Turno de noche (16:00-08:00)"];
   rows.forEach(({ date, shift }) => { if (shift) lines.push(`${toISO(date)};${shift.day.join(" / ")};${shift.night.join(" / ")}`); });
   const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
