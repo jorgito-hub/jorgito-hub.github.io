@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendario de Turnos</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --text: #1d2330;
+    --muted: #5d6576;
+    --border: #dde1e8;
+    --accent: #2457c5;
+    --day-bg: #fff4d6;
+    --day-text: #7a5200;
+    --night-bg: #e3e8ff;
+    --night-text: #26338a;
+    --off: #f0f1f4;
+    --today: #2457c5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b;
+      --surface: #1b2029;
+      --text: #e6e9ef;
+      --muted: #9aa3b5;
+      --border: #2e3542;
+      --accent: #7ea2ff;
+      --day-bg: #3a2f12;
+      --day-text: #ffd57a;
+      --night-bg: #1f2650;
+      --night-text: #b8c4ff;
+      --off: #161a21;
+      --today: #7ea2ff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b;
+    --surface: #1b2029;
+    --text: #e6e9ef;
+    --muted: #9aa3b5;
+    --border: #2e3542;
+    --accent: #7ea2ff;
+    --day-bg: #3a2f12;
+    --day-text: #ffd57a;
+    --night-bg: #1f2650;
+    --night-text: #b8c4ff;
+    --off: #161a21;
+    --today: #7ea2ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 20px; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+  }
+  .controls label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
+  .controls input, .controls button {
+    font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+  }
+  .controls button { cursor: pointer; }
+  .controls button:hover { border-color: var(--accent); }
+  .nav { display: flex; gap: 6px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .tab {
+    font: inherit; cursor: pointer; padding: 8px 14px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 1.15rem; margin: 0 0 6px; }
+  .card p { margin: 0 0 8px; color: var(--muted); }
+  .pattern { font-size: .9rem; }
+  .pattern code { background: var(--off); padding: 1px 6px; border-radius: 6px; color: var(--text); }
+  .month-title { font-size: 1.1rem; font-weight: 600; margin: 4px 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .dow { font-size: .78rem; color: var(--muted); text-align: center; font-weight: 600; text-transform: uppercase; }
+  .cell {
+    min-height: 92px; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px; background: var(--surface); display: flex; flex-direction: column; gap: 4px;
+  }
+  .cell.empty { background: transparent; border-style: dashed; opacity: .4; }
+  .cell.today { outline: 2px solid var(--today); outline-offset: -1px; }
+  .date { font-size: .8rem; font-weight: 600; color: var(--muted); }
+  .date .wd { display: none; }
+  .shift { font-size: .78rem; border-radius: 6px; padding: 2px 6px; line-height: 1.3; }
+  .shift b { font-weight: 600; }
+  .shift.d { background: var(--day-bg); color: var(--day-text); }
+  .shift.n { background: var(--night-bg); color: var(--night-text); }
+  .shift.none { background: var(--off); color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .85rem; margin-top: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+    .dow, .cell.empty { display: none; }
+    .cell { min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .date { width: 100%; }
+    .date .wd { display: inline; }
+  }
+  @media print {
+    body { background: #fff; color: #000; }
+    .controls, .tabs { display: none; }
+    .card { border: none; padding: 0; break-inside: avoid; }
+    main { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Calendario de turnos día / noche</h1>
+  <p class="lead">Orden de rotación: ARIEL → OSNEILING → RAFAEL → LUIS → OSCAR → KEVIN. Tres propuestas para comparar.</p>
+
+  <div class="controls">
+    <label>Inicio de la rotación
+      <input type="date" id="start">
+    </label>
+    <label>Mes a mostrar
+      <input type="month" id="month">
+    </label>
+    <div class="nav">
+      <button type="button" id="prev" aria-label="Mes anterior">◀</button>
+      <button type="button" id="next" aria-label="Mes siguiente">▶</button>
+    </div>
+    <button type="button" id="csv">Descargar CSV</button>
+    <button type="button" onclick="window.print()">Imprimir</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-p="1">1) 1 de día · 1 de noche</button>
+    <button class="tab" role="tab" data-p="2">2) 1 de día · 2 de noche</button>
+    <button class="tab" role="tab" data-p="3">3) Noche sin OSNEILING</button>
+  </div>
+
+  <section class="card">
+    <h2 id="p-title"></h2>
+    <p id="p-desc"></p>
+    <p class="pattern" id="p-pattern"></p>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--day-bg)"></i>☀ Turno de día</span>
+      <span><i class="sw" style="background:var(--night-bg)"></i>☾ Turno de noche</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="month-title" id="month-title"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="card">
+    <h2>Resumen del mes</h2>
+    <div class="table-wrap"><table id="summary"></table></div>
+  </section>
+</main>
+
+<script>
+const ALL = ["ARIEL", "OSNEILING", "RAFAEL", "LUIS", "OSCAR", "KEVIN"];
+const NIGHT_3 = ["ARIEL", "RAFAEL", "LUIS", "OSCAR", "KEVIN"];
+const DAY_MS = 86400000;
+const mod = (a, n) => ((a % n) + n) % n;
+
+const PROPOSALS = {
+  1: {
+    title: "Propuesta 1 — 1 analista de día y 1 de noche",
+    desc: "Cada persona hace un turno de día, al día siguiente el turno de noche y luego descansa 4 días. Ciclo de 6 días: 2 turnos por persona.",
+    pattern: "Por persona: <code>Día → Noche → Libre → Libre → Libre → Libre</code>",
+    // day i: day = ALL[i], night = ALL[i-1]
+    build(n) {
+      const out = [];
+      for (let i = 0; i < n; i++) out.push({ day: [ALL[mod(i, 6)]], night: [ALL[mod(i - 1, 6)]] });
+      return out;
+    }
+  },
+  2: {
+    title: "Propuesta 2 — 1 analista de día y 2 de noche",
+    desc: "Cada persona hace un turno de día y luego dos noches seguidas, después descansa 3 días. Ciclo de 6 días: 3 turnos por persona.",
+    pattern: "Por persona: <code>Día → Noche → Noche → Libre → Libre → Libre</code>",
+    // day i: day = ALL[i], night = ALL[i-1], ALL[i-2]
+    build(n) {
+      const out = [];
+      for (let i = 0; i < n; i++) out.push({ day: [ALL[mod(i, 6)]], night: [ALL[mod(i - 1, 6)], ALL[mod(i - 2, 6)]] });
+      return out;
+    }
+  },
+  3: {
+    title: "Propuesta 3 — Noche solo ARIEL, RAFAEL, LUIS, OSCAR y KEVIN",
+    desc: "La noche rota entre 5 analistas (cada uno cada 5 días). El día lo cubren los 6, priorizando a quien lleva menos turnos para equilibrar la carga; nadie trabaja de día si tiene noche ese mismo día o salió de noche ese día.",
+    pattern: "Noche: <code>ARIEL → RAFAEL → LUIS → OSCAR → KEVIN</code> · Día: los 6 en orden ARIEL → … → KEVIN, equilibrando el total de turnos",
+    build(n) {
+      const out = [];
+      const total = Object.fromEntries(ALL.map(p => [p, 0]));
+      let queue = ALL.slice();
+      for (let i = 0; i < n; i++) {
+        const night = NIGHT_3[mod(i, 5)];
+        const prevNight = i > 0 ? NIGHT_3[mod(i - 1, 5)] : null;
+        const eligible = queue.filter(p => p !== night && p !== prevNight);
+        const min = Math.min(...eligible.map(p => total[p]));
+        const day = eligible.find(p => total[p] === min);
+        queue = queue.filter(p => p !== day).concat(day);
+        total[day]++; total[night]++;
+        out.push({ day: [day], night: [night] });
+      }
+      return out;
+    }
+  }
+};
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const toISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseISO = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const dayIndex = (d, start) => Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())) / DAY_MS);
+
+const today = new Date();
+const state = { p: 1, start: toISO(new Date(today.getFullYear(), today.getMonth(), 1)), month: `${today.getFullYear()}-${pad(today.getMonth() + 1)}` };
+try {
+  const saved = JSON.parse(localStorage.getItem("turnos") || "{}");
+  Object.assign(state, saved);
+} catch (e) {}
+
+function save() { try { localStorage.setItem("turnos", JSON.stringify(state)); } catch (e) {} }
+
+function monthData() {
+  const [y, m] = state.month.split("-").map(Number);
+  const first = new Date(y, m - 1, 1);
+  const days = new Date(y, m, 0).getDate();
+  const start = parseISO(state.start);
+  const lastIdx = dayIndex(new Date(y, m - 1, days), start);
+  const sched = lastIdx >= 0 ? PROPOSALS[state.p].build(lastIdx + 1) : [];
+  const rows = [];
+  for (let d = 1; d <= days; d++) {
+    const date = new Date(y, m - 1, d);
+    const idx = dayIndex(date, start);
+    rows.push({ date, shift: idx >= 0 ? sched[idx] : null });
+  }
+  return { first, rows };
+}
+
+function render() {
+  const P = PROPOSALS[state.p];
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.p == state.p)));
+  $("p-title").textContent = P.title;
+  $("p-desc").textContent = P.desc;
+  $("p-pattern").innerHTML = P.pattern;
+  $("start").value = state.start;
+  $("month").value = state.month;
+
+  const { first, rows } = monthData();
+  const mt = first.toLocaleDateString("es", { month: "long", year: "numeric" });
+  $("month-title").textContent = mt.charAt(0).toUpperCase() + mt.slice(1);
+
+  const grid = $("grid");
+  grid.innerHTML = "";
+  ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].forEach(d => {
+    const el = document.createElement("div"); el.className = "dow"; el.textContent = d; grid.appendChild(el);
+  });
+  const lead = mod(first.getDay() - 1, 7);
+  for (let i = 0; i < lead; i++) { const e = document.createElement("div"); e.className = "cell empty"; grid.appendChild(e); }
+
+  const todayISO = toISO(new Date());
+  const counts = Object.fromEntries(ALL.map(p => [p, { d: 0, n: 0 }]));
+  rows.forEach(({ date, shift }) => {
+    const c = document.createElement("div");
+    c.className = "cell" + (toISO(date) === todayISO ? " today" : "");
+    const wd = date.toLocaleDateString("es", { weekday: "long" });
+    c.innerHTML = `<div class="date"><span class="wd">${wd} </span>${date.getDate()}</div>`;
+    if (shift) {
+      c.innerHTML += `<div class="shift d">☀ <b>${shift.day.join(", ")}</b></div>`;
+      c.innerHTML += `<div class="shift n">☾ <b>${shift.night.join(", ")}</b></div>`;
+      shift.day.forEach(p => counts[p].d++);
+      shift.night.forEach(p => counts[p].n++);
+    } else {
+      c.innerHTML += `<div class="shift none">Antes del inicio</div>`;
+    }
+    grid.appendChild(c);
+  });
+
+  $("summary").innerHTML =
+    `<thead><tr><th>Analista</th><th class="num">Días</th><th class="num">Noches</th><th class="num">Total</th></tr></thead><tbody>` +
+    ALL.map(p => `<tr><td>${p}</td><td class="num">${counts[p].d}</td><td class="num">${counts[p].n}</td><td class="num">${counts[p].d + counts[p].n}</td></tr>`).join("") +
+    `</tbody>`;
+  save();
+}
+
+function shiftMonth(delta) {
+  const [y, m] = state.month.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  state.month = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+  render();
+}
+
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => { state.p = Number(t.dataset.p); render(); }));
+$("start").addEventListener("change", e => { if (e.target.value) { state.start = e.target.value; render(); } });
+$("month").addEventListener("change", e => { if (e.target.value) { state.month = e.target.value; render(); } });
+$("prev").addEventListener("click", () => shiftMonth(-1));
+$("next").addEventListener("click", () => shiftMonth(1));
+$("csv").addEventListener("click", () => {
+  const { rows } = monthData();
+  const lines = ["Fecha;Turno de día;Turno de noche"];
+  rows.forEach(({ date, shift }) => { if (shift) lines.push(`${toISO(date)};${shift.day.join(" / ")};${shift.night.join(" / ")}`); });
+  const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `turnos-propuesta${state.p}-${state.month}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+render();
+</script>
+</body>
+</html>
