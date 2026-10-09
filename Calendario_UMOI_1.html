@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Turnos</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+
+h1 {
+  text-align: center;      /* centra horizontalmente */
+  font-size: 28px;         /* tamaño del texto */
+  font-weight: bold;       /* negrita */
+  margin-bottom: 20px;     /* espacio debajo */
+  letter-spacing: 1px;     /* separación de letras */
+  color: white; 
+  background: navy;                       
+}
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    padding: 20px;
+  }
+
+  .layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .contenedor {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  table {
+    width: 100%;
+    table-layout: fixed; /* 🔥 CLAVE */
+    border-collapse: collapse;
+    border-radius: 10px;
+    overflow: hidden;
+	table-layout: fixed;
+  }
+
+th, td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+th:first-child, td:first-child {
+  width: 140px; /* columna DIA */
+}
+
+th:not(:first-child), td:not(:first-child) {
+  width: calc((100% - 140px) / 3); /* 3 columnas iguales */
+}
+
+  tr:nth-child(even) {
+    background: #f9f9f9;
+  }
+
+select {
+  min-width: 100px;   /* antes 140 → ahora más compacto */
+  font-size: 12px;
+  padding: 4px;
+}
+
+  .resumen {
+    min-width: 250px;
+  }
+
+button {
+  display: flex;              /* 🔥 centra el contenido */
+  align-items: center;
+  justify-content: center;
+
+  width: 28px;                /* tamaño real del botón */
+  height: 28px;
+
+  font-size: 16px;            /* tamaño del + */
+  line-height: 1;             /* evita desbordes */
+
+  margin-top: 8px;
+  padding: 0;                 /* 🔥 quita padding innecesario */
+
+  border: none;
+  background: gray;
+  color: white;
+  font-weight: bold;
+
+  border-radius: 50%;         /* círculo perfecto */
+  cursor: pointer;
+}
+    button:hover {
+	font-weight: bold;
+	color: white;
+	background: crimson;
+  }
+  
+  .sin-oficina {
+     text-align: center; 
+  color: #999;
+  font-style: italic;
+}
+
+th input[type="time"] {
+  width: 90px;
+  padding: 4px;
+  border: none;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 18px;
+}
+
+th input[type="time"]:focus {
+  outline: 2px solid #000;
+}
+
+.contenedor-selects {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;        /* 🔥 menos espacio entre elementos */
+  flex-wrap: wrap; /* 🔥 permite acomodarse sin romper */
+}
+
+.grupo-select {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.grupo-select.extra {
+  margin: 0; /* 🔥 quita el margen vertical */
+}
+
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+  padding: 0;
+  border-radius: 50%;
+  background: LightCyan;
+  color: white;
+}
+
+
+.btn-add:hover {
+  background: crimson;
+}
+
+.grupo-horas {
+  display: flex;
+  justify-content: center;  /* 🔥 centra horizontal */
+  align-items: center;
+  gap: 6px;
+  width: 100%;              /* 🔥 ocupa toda la columna */
+}
+
+.grupo-horas input {
+  width: 75px;
+  text-align: center;
+    font-size: 14px;
+
+}
+
+th, td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+
+.contenedor:first-child {
+  flex: 3;   /* tabla calendario más grande */
+}
+
+.resumen {
+  flex: 1;   /* tabla horas más pequeña */
+  max-width: 280px;  /* 🔥 límite real */
+ }
+
+.resumen table {
+  width: 100%;
+  font-size: 14px; /* un poco más compacto */
+  text-align: left;
+   justify-content: left;
+}
+
+td {
+  padding: 6px; /* antes 10px */
+}
+
+th {
+  padding: 8px;
+  font-size: 14px;
+}
+
+.contenedor:first-child {
+  flex: 2.2; /* antes 3 → ahora más compacto */
+  max-width: 900px; /* 🔥 limita crecimiento */
+}
+
+
+.btn-PDF {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  height: 40px;
+  font-size: 14px;
+  padding: 0;
+  background: navy;
+  color: white;
+  border-radius: 10px;
+}
+
+.resumen td:first-child,
+.resumen th:first-child {
+  text-align: left;   /* 🔥 nombres alineados a la izquierda */
+  padding-left: 10px; /* opcional, mejora visual */
+}
+
+.barra-contenedor {
+  width: 100%;
+  height: 14px;
+  background: #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.barra {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4facfe, #00f2fe);
+  border-radius: 10px;
+  transition: width 0.4s ease;
+}
+
+.porcentaje-texto {
+  font-size: 11px;
+  margin-left: 6px;
+  color: #333;
+}
+
+
+</style>
+</head>
+
+<body>
+
+<h1>📅 CALENDARIO DE TURNOS MANAGUA</h1>
+
+<div id="areaPDF" class="layout">
+
+  <!-- TABLA PRINCIPAL -->
+  
+  
+  
+  <div class="contenedor">
+    <table>
+<thead>
+  <tr>
+   <th>🖥️ DESARROLLO</th>
+    <th>DIA/TURNO</th>
+   
+    <th>☀️ MONITOREO DIURNO</th>
+    <th>🌙 MONITOREO NOCTURNO</th>
+  </tr>
+
+  <tr>
+    <th></th>
+
+    <th>
+      <div class="grupo-horas">
+        <input type="time" value="08:00" onchange="guardarHoras()">
+        <input type="time" value="16:00" onchange="guardarHoras()">
+      </div>
+    </th>
+
+    <th>
+      <div class="grupo-horas">
+        <input type="time" value="11:00" onchange="guardarHoras()">
+        <input type="time" value="17:00" onchange="guardarHoras()">
+      </div>
+    </th>
+
+    <th>
+      <div class="grupo-horas">
+        <input type="time" value="16:00" onchange="guardarHoras()">
+        <input type="time" value="08:00" onchange="guardarHoras()">
+      </div>
+    </th>
+  </tr>
+</thead>
+      <tbody id="tablaBody"></tbody>
+    </table>
+  </div>
+
+  <!-- TABLA RESUMEN -->
+  <div class="contenedor resumen">
+    <table>
+      <thead>
+        <tr>
+          <th>Analistas</th>
+          <th>Horas de Turno</th>
+        </tr>
+      </thead>
+      <tbody id="resumenBody"></tbody>
+    </table>
+  </div>
+
+</div>
+<div></div>
+<button  class="btn-PDF" onclick="exportarPDF()">💾Guardar Calendario</button>
+
+<script>
+const personas = [
+  "🟢 Rafael",
+  "🔵 Kevin",
+  "🔴 Oscar",
+  "🟣 Osneiling",
+  "🟡 Luis",
+  "🟠 Ariel",
+  "🟤 Samuel"
+];
+
+
+
+const dias = ["LUNES","MARTES","MIERCOLES","JUEVES","VIERNES","SABADO","DOMINGO"];
+
+function crearTabla() {
+  const tbody = document.getElementById("tablaBody");
+  tbody.innerHTML = "";
+
+  dias.forEach((dia, i) => {
+    const fila = document.createElement("tr");
+
+    const esFinDeSemana = (dia === "SABADO" || dia === "DOMINGO");
+
+
+fila.innerHTML = `
+
+
+  <!-- 🖥️ OFICINA (2 columnas) -->
+  <td>${esFinDeSemana ? '<span class="sin-oficina">—</span>' : crearSelect(i,"oficina")}</td>
+
+  <td><strong>${dia}</strong></td>
+
+  <!-- ☀️ DÍA (2 columnas) -->
+  <td>${crearSelect(i,"dia")}</td>
+
+
+  <!-- 🌙 NOCHE (2 columnas) -->
+  <td>${crearSelect(i,"noche")}</td>
+
+`;
+
+    tbody.appendChild(fila);
+  });
+
+  cargarDatos();
+  actualizarResumen();
+}
+
+function crearSelect(index, tipo) {
+  return `
+    <div class="contenedor-selects" data-id="${index}-${tipo}">
+      <div class="grupo-select">
+        <select onchange="actualizarVisualSelects(this); guardarDatos(); actualizarResumen()">
+          ${personas.map(p => `<option value="${p}">${p}</option>`).join("")}
+        </select>
+        <button type="button" class="btn-add" onclick="toggleSelect(this)">+</button>
+      </div>
+    </div>
+  `;
+}
+
+function guardarDatos() {
+  const datos = {};
+
+  document.querySelectorAll(".contenedor-selects").forEach(contenedor => {
+    const id = contenedor.dataset.id;
+    if (!id) return;
+
+    const selects = contenedor.querySelectorAll("select");
+    const valores = Array.from(selects).map(sel => sel.value);
+
+    const boton = contenedor.querySelector(".btn-add");
+    const estadoBoton = boton ? boton.textContent : "+";
+
+    datos[id] = {
+      valores: valores,
+      expandido: valores.length > 1,
+      boton: estadoBoton
+    };
+  });
+
+  localStorage.setItem("turnos", JSON.stringify(datos));
+}
+
+
+function cargarDatos() {
+  const datos = JSON.parse(localStorage.getItem("turnos")) || {};
+
+  document.querySelectorAll(".contenedor-selects").forEach(contenedor => {
+    const id = contenedor.dataset.id;
+    const data = datos[id];
+
+    if (!data) return;
+
+    const { valores, expandido, boton } = data;
+
+    const primerGrupo = contenedor.querySelector(".grupo-select");
+
+    // Limpiar extras
+    contenedor.querySelectorAll(".extra").forEach(e => e.remove());
+
+    valores.forEach((valor, index) => {
+      if (index === 0) {
+        const select = primerGrupo.querySelector("select");
+        select.value = valor;
+      } else {
+        const nuevo = document.createElement("div");
+        nuevo.className = "grupo-select extra";
+
+        nuevo.innerHTML = `
+          <select onchange="actualizarVisualSelects(this); guardarDatos(); actualizarResumen()">
+            ${personas.map(p => `<option value="${p}" ${p === valor ? "selected" : ""}>${p}</option>`).join("")}
+          </select>
+        `;
+
+        contenedor.appendChild(nuevo);
+      }
+    });
+
+    // Restaurar botón
+    const botonAdd = contenedor.querySelector(".btn-add");
+    if (botonAdd) {
+      botonAdd.textContent = expandido ? "−" : "+";
+    }
+
+    // Actualizar abreviación
+    const primerSelect = contenedor.querySelector("select");
+    if (primerSelect) actualizarVisualSelects(primerSelect);
+  });
+}
+
+
+// 🔥 CALCULAR DURACIÓN ENTRE DOS HORAS (soporta cruce de medianoche, ej: nocturno 16:00 → 08:00)
+function calcularDuracion(inicio, fin) {
+  if (!inicio || !fin) return 0;
+
+  const [h1, m1] = inicio.split(":").map(Number);
+  const [h2, m2] = fin.split(":").map(Number);
+
+  const minutosInicio = h1 * 60 + m1;
+  let minutosFin = h2 * 60 + m2;
+
+  let diff = minutosFin - minutosInicio;
+  if (diff <= 0) diff += 24 * 60; // 🔥 cruza medianoche
+
+  return diff / 60; // en horas
+}
+
+// 🔥 OBTENER DURACIÓN ACTUAL DE CADA TURNO SEGÚN LOS INPUTS DE HORA
+function obtenerDuraciones() {
+  // 🔥 solo los th que realmente contienen un grupo-horas (se ignora el th vacío inicial)
+  const todosLosTh = document.querySelectorAll("thead tr:nth-child(2) th");
+  const ths = Array.from(todosLosTh).filter(th => th.querySelector(".grupo-horas"));
+  const tipos = ["oficina", "dia", "noche"];
+  const duraciones = {};
+
+  ths.forEach((th, i) => {
+    const inputs = th.querySelectorAll("input[type='time']");
+    if (inputs.length === 2 && inputs[0].value && inputs[1].value) {
+      duraciones[tipos[i]] = calcularDuracion(inputs[0].value, inputs[1].value);
+    } else {
+      duraciones[tipos[i]] = 0;
+    }
+  });
+
+  return duraciones;
+}
+
+// 🔥 CALCULAR HORAS (en tiempo real, según los horarios editados)
+function actualizarResumen() {
+  const horasPorPersona = {};
+
+  personas.forEach(p => horasPorPersona[p] = 0);
+
+  const duraciones = obtenerDuraciones();
+
+  document.querySelectorAll(".contenedor-selects").forEach(contenedor => {
+    const id = contenedor.dataset.id; // 🔥 aquí sí está el data-id
+    if (!id) return;
+
+    const selects = contenedor.querySelectorAll("select");
+
+    let tipo = "dia";
+    if (id.includes("oficina")) tipo = "oficina";       // 🖥️ DESARROLLO
+    else if (id.includes("noche")) tipo = "noche";       // 🌙 NOCTURNO
+    else tipo = "dia";                                   // ☀️ DIURNO
+
+    selects.forEach(sel => {
+      const persona = sel.value;
+      horasPorPersona[persona] += duraciones[tipo];
+    });
+  });
+
+const tbody = document.getElementById("resumenBody");
+tbody.innerHTML = "";
+
+const MAX_HORAS = 48;
+
+personas.forEach(p => {
+  const horas = horasPorPersona[p];
+  const horasTexto = Number.isInteger(horas) ? horas : horas.toFixed(1);
+  const porcentaje = Math.min((horas / MAX_HORAS) * 100, 100).toFixed(0);
+
+  tbody.innerHTML += `
+    <tr>
+      <td>${p}</td>
+      <td>
+        ${horasTexto} hrs
+        <div class="barra-contenedor">
+          <div class="barra" style="width: ${porcentaje}%"></div>
+        </div>
+        <span class="porcentaje-texto">${porcentaje}%</span>
+      </td>
+    </tr>
+  `;
+});
+}
+
+
+// PDF
+async function exportarPDF() {
+  const { jsPDF } = window.jspdf;
+  const canvas = await html2canvas(document.getElementById("areaPDF"), { scale: 3 });
+
+  const img = canvas.toDataURL("image/png");
+  const pdf = new jsPDF();
+
+  const width = 190;
+  const height = canvas.height * width / canvas.width;
+
+  pdf.addImage(img, "PNG", 10, 10, width, height);
+  pdf.save("turnos.pdf");
+}
+
+crearTabla();
+
+
+function guardarHoras() {
+  const horas = [];
+  document.querySelectorAll("thead input[type='time']").forEach(input => {
+    horas.push(input.value);
+  });
+  localStorage.setItem("horasTurnos", JSON.stringify(horas));
+
+  actualizarResumen(); // 🔥 recalcular en tiempo real al editar los horarios
+}
+
+function cargarHoras() {
+  const horas = JSON.parse(localStorage.getItem("horasTurnos")) || [];
+  const inputs = document.querySelectorAll("thead input[type='time']");
+
+  inputs.forEach((input, i) => {
+    if (horas[i]) input.value = horas[i];
+  });
+
+  actualizarResumen(); // 🔥 asegura que el resumen use las horas cargadas/guardadas
+}
+
+cargarHoras();
+
+function toggleSelect(btn) {
+  const grupo = btn.parentElement;
+  const contenedor = grupo.parentElement;
+
+  if (btn.textContent === "+") {
+    const nuevo = document.createElement("div");
+    nuevo.className = "grupo-select extra";
+
+    nuevo.innerHTML = `
+      <select onchange="actualizarVisualSelects(this); guardarDatos(); actualizarResumen()">
+        ${personas.map(p => `<option value="${p}">${p}</option>`).join("")}
+      </select>
+    `;
+
+    contenedor.appendChild(nuevo);
+    btn.textContent = "−";
+
+  } else {
+    contenedor.querySelectorAll(".extra").forEach(e => e.remove());
+    btn.textContent = "+";
+  }
+
+  // 🔥 actualizar abreviación
+  const primerSelect = contenedor.querySelector("select");
+  if (primerSelect) actualizarVisualSelects(primerSelect);
+
+  guardarDatos();
+  actualizarResumen();
+}
+
+function abreviar(nombre) {
+  return nombre.substring(2, 6).toUpperCase();
+}
+
+function actualizarVisualSelects(selectActual) {
+  const contenedor = selectActual.closest(".contenedor-selects");
+  const selects = contenedor.querySelectorAll("select");
+
+  const usarAbreviado = selects.length > 1;
+
+  selects.forEach(sel => {
+    const valorActual = sel.value;
+
+    sel.innerHTML = personas.map(p => {
+      let texto = p;
+
+      if (usarAbreviado) {
+        const nombre = p.substring(2); // quita emoji
+        const abreviado = nombre.substring(0,4).toUpperCase();
+        texto = p.substring(0,2) + abreviado; // mantiene emoji
+      }
+
+      return `<option value="${p}" ${p === valorActual ? "selected" : ""}>${texto}</option>`;
+    }).join("");
+  });
+}
+
+
+</script>
+
+</body>
+</html>
