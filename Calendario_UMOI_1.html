@@ -57,7 +57,7 @@ th:first-child, td:first-child {
 }
 
 th:not(:first-child), td:not(:first-child) {
-  width: calc((100% - 140px) / 3); /* 3 columnas iguales */
+  width: calc((100% - 140px) / 2); /* 2 columnas iguales */
 }
 
   tr:nth-child(even) {
@@ -102,11 +102,6 @@ button {
 	background: crimson;
   }
   
-  .sin-oficina {
-     text-align: center; 
-  color: #999;
-  font-style: italic;
-}
 
 th input[type="time"] {
   width: 90px;
@@ -277,22 +272,13 @@ th {
     <table>
 <thead>
   <tr>
-   <th>🖥️ DESARROLLO</th>
     <th>DIA/TURNO</th>
-   
     <th>☀️ MONITOREO DIURNO</th>
     <th>🌙 MONITOREO NOCTURNO</th>
   </tr>
 
   <tr>
     <th></th>
-
-    <th>
-      <div class="grupo-horas">
-        <input type="time" value="08:00" onchange="guardarHoras()">
-        <input type="time" value="16:00" onchange="guardarHoras()">
-      </div>
-    </th>
 
     <th>
       <div class="grupo-horas">
@@ -337,9 +323,11 @@ const personas = [
   "🔴 Oscar",
   "🟣 Osneiling",
   "🟡 Luis",
-  "🟠 Ariel",
-  "🟤 Samuel"
+  "🟠 Ariel"
 ];
+
+// 🔥 máximo de analistas por tipo de monitoreo
+const MAX_ANALISTAS = { dia: 3, noche: 2 };
 
 
 
@@ -352,24 +340,14 @@ function crearTabla() {
   dias.forEach((dia, i) => {
     const fila = document.createElement("tr");
 
-    const esFinDeSemana = (dia === "SABADO" || dia === "DOMINGO");
-
-
 fila.innerHTML = `
-
-
-  <!-- 🖥️ OFICINA (2 columnas) -->
-  <td>${esFinDeSemana ? '<span class="sin-oficina">—</span>' : crearSelect(i,"oficina")}</td>
-
   <td><strong>${dia}</strong></td>
 
-  <!-- ☀️ DÍA (2 columnas) -->
+  <!-- ☀️ DÍA (hasta 3 analistas) -->
   <td>${crearSelect(i,"dia")}</td>
 
-
-  <!-- 🌙 NOCHE (2 columnas) -->
+  <!-- 🌙 NOCHE (hasta 2 analistas) -->
   <td>${crearSelect(i,"noche")}</td>
-
 `;
 
     tbody.appendChild(fila);
@@ -402,14 +380,7 @@ function guardarDatos() {
     const selects = contenedor.querySelectorAll("select");
     const valores = Array.from(selects).map(sel => sel.value);
 
-    const boton = contenedor.querySelector(".btn-add");
-    const estadoBoton = boton ? boton.textContent : "+";
-
-    datos[id] = {
-      valores: valores,
-      expandido: valores.length > 1,
-      boton: estadoBoton
-    };
+    datos[id] = { valores: valores };
   });
 
   localStorage.setItem("turnos", JSON.stringify(datos));
@@ -423,38 +394,25 @@ function cargarDatos() {
     const id = contenedor.dataset.id;
     const data = datos[id];
 
-    if (!data) return;
+    if (!data || !Array.isArray(data.valores)) return;
 
-    const { valores, expandido, boton } = data;
-
-    const primerGrupo = contenedor.querySelector(".grupo-select");
+    // 🔥 solo analistas existentes y respetando el máximo del tipo
+    const valores = data.valores
+      .filter(v => personas.includes(v))
+      .slice(0, maxAnalistas(contenedor));
 
     // Limpiar extras
     contenedor.querySelectorAll(".extra").forEach(e => e.remove());
 
     valores.forEach((valor, index) => {
       if (index === 0) {
-        const select = primerGrupo.querySelector("select");
-        select.value = valor;
+        contenedor.querySelector("select").value = valor;
       } else {
-        const nuevo = document.createElement("div");
-        nuevo.className = "grupo-select extra";
-
-        nuevo.innerHTML = `
-          <select onchange="actualizarVisualSelects(this); guardarDatos(); actualizarResumen()">
-            ${personas.map(p => `<option value="${p}" ${p === valor ? "selected" : ""}>${p}</option>`).join("")}
-          </select>
-        `;
-
-        contenedor.appendChild(nuevo);
+        agregarGrupoExtra(contenedor, valor);
       }
     });
 
-    // Restaurar botón
-    const botonAdd = contenedor.querySelector(".btn-add");
-    if (botonAdd) {
-      botonAdd.textContent = expandido ? "−" : "+";
-    }
+    actualizarBotones(contenedor);
 
     // Actualizar abreviación
     const primerSelect = contenedor.querySelector("select");
@@ -484,7 +442,7 @@ function obtenerDuraciones() {
   // 🔥 solo los th que realmente contienen un grupo-horas (se ignora el th vacío inicial)
   const todosLosTh = document.querySelectorAll("thead tr:nth-child(2) th");
   const ths = Array.from(todosLosTh).filter(th => th.querySelector(".grupo-horas"));
-  const tipos = ["oficina", "dia", "noche"];
+  const tipos = ["dia", "noche"];
   const duraciones = {};
 
   ths.forEach((th, i) => {
@@ -513,14 +471,11 @@ function actualizarResumen() {
 
     const selects = contenedor.querySelectorAll("select");
 
-    let tipo = "dia";
-    if (id.includes("oficina")) tipo = "oficina";       // 🖥️ DESARROLLO
-    else if (id.includes("noche")) tipo = "noche";       // 🌙 NOCTURNO
-    else tipo = "dia";                                   // ☀️ DIURNO
+    const tipo = id.includes("noche") ? "noche" : "dia"; // 🌙 NOCTURNO / ☀️ DIURNO
 
     selects.forEach(sel => {
       const persona = sel.value;
-      horasPorPersona[persona] += duraciones[tipo];
+      if (persona in horasPorPersona) horasPorPersona[persona] += duraciones[tipo];
     });
   });
 
@@ -529,7 +484,10 @@ tbody.innerHTML = "";
 
 const MAX_HORAS = 48;
 
-personas.forEach(p => {
+// 🔥 siempre ordenado de mayor a menor horas de turno
+const ordenadas = [...personas].sort((a, b) => horasPorPersona[b] - horasPorPersona[a]);
+
+ordenadas.forEach(p => {
   const horas = horasPorPersona[p];
   const horasTexto = Number.isInteger(horas) ? horas : horas.toFixed(1);
   const porcentaje = Math.min((horas / MAX_HORAS) * 100, 100).toFixed(0);
@@ -573,13 +531,13 @@ function guardarHoras() {
   document.querySelectorAll("thead input[type='time']").forEach(input => {
     horas.push(input.value);
   });
-  localStorage.setItem("horasTurnos", JSON.stringify(horas));
+  localStorage.setItem("horasTurnosV2", JSON.stringify(horas));
 
   actualizarResumen(); // 🔥 recalcular en tiempo real al editar los horarios
 }
 
 function cargarHoras() {
-  const horas = JSON.parse(localStorage.getItem("horasTurnos")) || [];
+  const horas = JSON.parse(localStorage.getItem("horasTurnosV2")) || [];
   const inputs = document.querySelectorAll("thead input[type='time']");
 
   inputs.forEach((input, i) => {
@@ -591,27 +549,50 @@ function cargarHoras() {
 
 cargarHoras();
 
+// 🔥 máximo de analistas según el tipo de monitoreo del contenedor
+function maxAnalistas(contenedor) {
+  const tipo = contenedor.dataset.id.split("-")[1];
+  return MAX_ANALISTAS[tipo] || 2;
+}
+
+// 🔥 agrega un select extra; lleva su propio botón + si aún cabe otro analista
+function agregarGrupoExtra(contenedor, valor) {
+  const nuevo = document.createElement("div");
+  nuevo.className = "grupo-select extra";
+
+  const total = contenedor.querySelectorAll("select").length + 1;
+  const conBoton = total < maxAnalistas(contenedor);
+
+  nuevo.innerHTML = `
+    <select onchange="actualizarVisualSelects(this); guardarDatos(); actualizarResumen()">
+      ${personas.map(p => `<option value="${p}" ${p === valor ? "selected" : ""}>${p}</option>`).join("")}
+    </select>
+    ${conBoton ? '<button type="button" class="btn-add" onclick="toggleSelect(this)">+</button>' : ""}
+  `;
+
+  contenedor.appendChild(nuevo);
+}
+
+// 🔥 cada botón muestra "−" si hay un grupo después de él, si no "+"
+function actualizarBotones(contenedor) {
+  contenedor.querySelectorAll(".grupo-select").forEach(grupo => {
+    const btn = grupo.querySelector(".btn-add");
+    if (btn) btn.textContent = grupo.nextElementSibling ? "−" : "+";
+  });
+}
+
 function toggleSelect(btn) {
   const grupo = btn.parentElement;
   const contenedor = grupo.parentElement;
 
   if (btn.textContent === "+") {
-    const nuevo = document.createElement("div");
-    nuevo.className = "grupo-select extra";
-
-    nuevo.innerHTML = `
-      <select onchange="actualizarVisualSelects(this); guardarDatos(); actualizarResumen()">
-        ${personas.map(p => `<option value="${p}">${p}</option>`).join("")}
-      </select>
-    `;
-
-    contenedor.appendChild(nuevo);
-    btn.textContent = "−";
-
+    agregarGrupoExtra(contenedor);
   } else {
-    contenedor.querySelectorAll(".extra").forEach(e => e.remove());
-    btn.textContent = "+";
+    // quita todos los grupos posteriores a este
+    while (grupo.nextElementSibling) grupo.nextElementSibling.remove();
   }
+
+  actualizarBotones(contenedor);
 
   // 🔥 actualizar abreviación
   const primerSelect = contenedor.querySelector("select");
