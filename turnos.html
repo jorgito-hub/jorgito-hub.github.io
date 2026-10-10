@@ -165,7 +165,7 @@
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-p="1">1) 1 de día · 1 de noche</button>
-    <button class="tab" role="tab" data-p="2">2) 1 de día · 2 de noche</button>
+    <button class="tab" role="tab" data-p="2">2) Día fijo Osneiling/Rafael · noche entre 4</button>
     <button class="tab" role="tab" data-p="3">3) Sin noche mar–jue (Osneiling, Rafael)</button>
   </div>
 
@@ -221,10 +221,19 @@ const PROPOSALS = {
     build: n => grouped(n, 2)
   },
   2: {
-    title: "Propuesta 2 — 1 analista de día y 2 de noche",
-    desc: "El mismo orden se recorre en grupos de 3 (1 día + 2 noches). En cada vuelta el grupo rota una posición, así todos pasan por día y por noche. Ciclo de 6 días: cada persona hace 1 día y 2 noches.",
-    pattern: "Vuelta 1: <code>ARIEL / OSNEILING, RAFAEL</code> → <code>LUIS / OSCAR, KEVIN</code> · Vuelta 2: <code>OSNEILING / RAFAEL, ARIEL</code> → <code>OSCAR / KEVIN, LUIS</code> · Vuelta 3: <code>RAFAEL / ARIEL, OSNEILING</code> → <code>KEVIN / LUIS, OSCAR</code> (día / noches)",
-    build: n => grouped(n, 3)
+    title: "Propuesta 2 — Día fijo OSNEILING y RAFAEL · Noche rotada entre 4",
+    desc: "OSNEILING y RAFAEL cubren el día de lunes a viernes; el sábado de día va RAFAEL y el domingo OSNEILING. Ellos no hacen noche nunca. La noche rota, una persona por noche, entre ARIEL, LUIS, OSCAR y KEVIN en ese orden.",
+    pattern: "Día: <code>lun–vie OSNEILING + RAFAEL</code> · <code>sáb RAFAEL</code> · <code>dom OSNEILING</code> · Noche: <code>ARIEL → LUIS → OSCAR → KEVIN</code>",
+    build(n, start) {
+      const NIGHT = ["ARIEL", "LUIS", "OSCAR", "KEVIN"];
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const wd = mod(start.getDay() + i, 7);
+        const day = wd === 6 ? ["RAFAEL"] : wd === 0 ? ["OSNEILING"] : ["OSNEILING", "RAFAEL"];
+        out.push({ day, night: [NIGHT[mod(i, 4)]] });
+      }
+      return out;
+    }
   },
   3: {
     title: "Propuesta 3 — Patrón día/noche con restricción y horas equilibradas",
@@ -266,11 +275,11 @@ const today = new Date();
 const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 const state = { p: 1, start: toISO(new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth(), 1 - mod(firstOfMonth.getDay() - 1, 7))), month: `${today.getFullYear()}-${pad(today.getMonth() + 1)}`, edits: {} };
 try {
-  const saved = JSON.parse(localStorage.getItem("turnos-v3") || "{}");
+  const saved = JSON.parse(localStorage.getItem("turnos-v4") || "{}");
   Object.assign(state, saved);
 } catch (e) {}
 
-function save() { try { localStorage.setItem("turnos-v3", JSON.stringify(state)); } catch (e) {} }
+function save() { try { localStorage.setItem("turnos-v4", JSON.stringify(state)); } catch (e) {} }
 
 function editsFor(p) { return (state.edits[p] = state.edits[p] || {}); }
 
@@ -307,6 +316,7 @@ function validate(shift, prev, wd) {
   all.forEach((p, i) => { if (all.indexOf(p) !== i) w.push(`${p} tiene dos turnos el mismo día`); });
   if (prev) shift.day.forEach(p => { if (prev.night.includes(p)) w.push(`${p} sale de noche y entra de día`); });
   if (state.p === 3) shift.night.forEach(p => { if (nightBlocked(p, wd)) w.push(`${p} no puede hacer noche martes, miércoles ni jueves`); });
+  if (state.p === 2) shift.night.forEach(p => { if (NO_NIGHT.includes(p)) w.push(`${p} no hace turno de noche en esta propuesta`); });
   return [...new Set(w)];
 }
 
