@@ -227,14 +227,26 @@ const PROPOSALS = {
     build: n => grouped(n, 3)
   },
   3: {
-    title: "Propuesta 3 — Patrón 1 de día · 1 de noche con restricción de noche",
-    desc: "Mismo patrón de la propuesta 1. OSNEILING y RAFAEL no hacen noche los martes, miércoles ni jueves: si el patrón les asigna noche esos días, se intercambian con su pareja (ellos pasan al día y la pareja a la noche). De día pueden trabajar cualquier día, y de noche los viernes, sábados, domingos y lunes.",
-    pattern: "Parejas: <code>ARIEL / OSNEILING</code> → <code>RAFAEL / LUIS</code> → <code>OSCAR / KEVIN</code>, invirtiendo día/noche en cada vuelta · Sin noche mar–jue: <code>OSNEILING</code>, <code>RAFAEL</code>",
+    title: "Propuesta 3 — Patrón día/noche con restricción y horas equilibradas",
+    desc: "Parte del patrón de la propuesta 1. OSNEILING y RAFAEL no hacen noche los martes, miércoles ni jueves (de día pueden trabajar cualquier día). Cada día se elige quién cubre la noche y el día buscando que todos acumulen las mismas horas: se sigue el patrón cuando es justo y, si alguien va atrasado o adelantado en horas, se ajusta. Nadie trabaja dos días seguidos.",
+    pattern: "Base: <code>ARIEL / OSNEILING</code> → <code>RAFAEL / LUIS</code> → <code>OSCAR / KEVIN</code>, invirtiendo día/noche en cada vuelta · Sin noche mar–jue: <code>OSNEILING</code>, <code>RAFAEL</code> · Diferencia típica entre analistas: 1 noche (16 h) al mes",
     build(n, start) {
-      return grouped(n, 2).map((x, i) => {
-        if (nightBlocked(x.night[0], mod(start.getDay() + i, 7))) return { day: x.night, night: x.day };
-        return x;
-      });
+      const base = grouped(n, 2);
+      const hours = Object.fromEntries(ALL.map(p => [p, 0]));
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const wd = mod(start.getDay() + i, 7);
+        const prev = out[i - 1], prev2 = out[i - 2];
+        const busy = (s, p) => s && (s.day[0] === p || s.night[0] === p);
+        // Costo: horas acumuladas + pequeño peso por salirse del patrón + fuerte penalización por trabajar días seguidos.
+        const cost = (p, want) => hours[p] + (p === want ? 0 : 4) + (busy(prev, p) ? 100 : 0) + (busy(prev2, p) ? 10 : 0);
+        const pick = (cands, want) => cands.sort((a, b) => cost(a, want) - cost(b, want) || ALL.indexOf(a) - ALL.indexOf(b))[0];
+        const night = pick(ALL.filter(p => !nightBlocked(p, wd) && !(prev && prev.night[0] === p)), base[i].night[0]);
+        const day = pick(ALL.filter(p => p !== night && !(prev && prev.night[0] === p)), base[i].day[0]);
+        hours[day] += HOURS.d; hours[night] += HOURS.n;
+        out.push({ day: [day], night: [night] });
+      }
+      return out;
     }
   }
 };
