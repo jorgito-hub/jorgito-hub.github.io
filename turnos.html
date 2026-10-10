@@ -18,6 +18,7 @@
     --night-text: #26338a;
     --off: #f0f1f4;
     --today: #2457c5;
+    --bad: #c62828;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -33,6 +34,7 @@
       --night-text: #b8c4ff;
       --off: #161a21;
       --today: #7ea2ff;
+    --bad: #ff8a80;
     }
   }
   :root[data-theme="dark"] {
@@ -48,6 +50,7 @@
     --night-text: #b8c4ff;
     --off: #161a21;
     --today: #7ea2ff;
+    --bad: #ff8a80;
   }
   * { box-sizing: border-box; }
   body {
@@ -99,6 +102,19 @@
   .date .wd { display: none; }
   .shift { font-size: .78rem; border-radius: 6px; padding: 2px 6px; line-height: 1.3; }
   .shift b { font-weight: 600; white-space: nowrap; }
+  .slot { display: inline-flex; align-items: center; margin-right: 4px; border-radius: 4px; }
+  .slot select {
+    font: inherit; font-weight: 600; color: inherit; background: transparent; border: 0;
+    padding: 0 2px; cursor: pointer; max-width: 100%; appearance: none; -webkit-appearance: none;
+  }
+  .slot select:hover, .slot select:focus { text-decoration: underline; outline: none; }
+  .slot select option { color: #1d2330; background: #fff; }
+  .slot.edited { box-shadow: inset 0 -2px 0 currentColor; }
+  .cell.warn { border-color: var(--bad); }
+  .warn-msg { font-size: .72rem; color: var(--bad); line-height: 1.25; }
+  .hint, .status { font-size: .85rem; color: var(--muted); margin: 0 0 8px; }
+  .status .bad { color: var(--bad); font-weight: 600; }
+  button.link { font: inherit; background: none; border: 0; color: var(--accent); cursor: pointer; text-decoration: underline; padding: 0; }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: 0; border: 1px solid rgba(0,0,0,.25); }
   .shift.d { background: var(--day-bg); color: var(--day-text); }
   .shift.n { background: var(--night-bg); color: var(--night-text); }
@@ -121,7 +137,7 @@
   }
   @media print {
     body { background: #fff; color: #000; }
-    .controls, .tabs { display: none; }
+    .controls, .tabs, .hint, button.link { display: none; }
     .card { border: none; padding: 0; break-inside: avoid; }
     main { padding: 0; }
   }
@@ -150,7 +166,7 @@
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-p="1">1) 1 de día · 1 de noche</button>
     <button class="tab" role="tab" data-p="2">2) 1 de día · 2 de noche</button>
-    <button class="tab" role="tab" data-p="3">3) Noche sin OSNEILING</button>
+    <button class="tab" role="tab" data-p="3">3) Sin noche mar–jue (Osneiling, Rafael)</button>
   </div>
 
   <section class="card">
@@ -165,6 +181,8 @@
 
   <section class="card">
     <div class="month-title" id="month-title"></div>
+    <p class="hint">Toca un nombre para cambiar el analista de ese turno. Las horas se recalculan al instante y los cambios se guardan en este navegador.</p>
+    <p class="status"><span id="status"></span> <button type="button" id="reset" class="link" hidden>Restablecer patrón</button></p>
     <div class="grid" id="grid"></div>
   </section>
 
@@ -209,25 +227,22 @@ const PROPOSALS = {
     build: n => grouped(n, 3)
   },
   3: {
-    title: "Propuesta 3 — Noche solo ARIEL, RAFAEL, LUIS, OSCAR y KEVIN",
-    desc: "Se mantiene el orden del patrón, saltando a OSNEILING en la noche. La noche rota entre 5 analistas; el día lo cubren los 6 en su orden. Si a alguien le toca de día pero tiene noche ese día o viene saliendo de noche, pasa el siguiente y él queda primero para el próximo día.",
-    pattern: "Día: <code>ARIEL → RAFAEL → OSCAR → OSNEILING → LUIS → KEVIN</code> · Noche: <code>LUIS → KEVIN → ARIEL → RAFAEL → OSCAR</code>",
-    build(n) {
-      const DAY = ["ARIEL", "RAFAEL", "OSCAR", "OSNEILING", "LUIS", "KEVIN"];
-      const NIGHT = ["LUIS", "KEVIN", "ARIEL", "RAFAEL", "OSCAR"];
-      const out = [];
-      let queue = DAY.slice();
-      for (let i = 0; i < n; i++) {
-        const night = NIGHT[mod(i, 5)];
-        const prevNight = i > 0 ? NIGHT[mod(i - 1, 5)] : null;
-        const day = queue.find(p => p !== night && p !== prevNight);
-        queue = queue.filter(p => p !== day).concat(day);
-        out.push({ day: [day], night: [night] });
-      }
-      return out;
+    title: "Propuesta 3 — Patrón 1 de día · 1 de noche con restricción de noche",
+    desc: "Mismo patrón de la propuesta 1. OSNEILING y RAFAEL no hacen noche los martes, miércoles ni jueves: si el patrón les asigna noche esos días, se intercambian con su pareja (ellos pasan al día y la pareja a la noche). De día pueden trabajar cualquier día, y de noche los viernes, sábados, domingos y lunes.",
+    pattern: "Parejas: <code>ARIEL / OSNEILING</code> → <code>RAFAEL / LUIS</code> → <code>OSCAR / KEVIN</code>, invirtiendo día/noche en cada vuelta · Sin noche mar–jue: <code>OSNEILING</code>, <code>RAFAEL</code>",
+    build(n, start) {
+      return grouped(n, 2).map((x, i) => {
+        if (nightBlocked(x.night[0], mod(start.getDay() + i, 7))) return { day: x.night, night: x.day };
+        return x;
+      });
     }
   }
 };
+
+// Propuesta 3: OSNEILING y RAFAEL sin noche martes (2), miércoles (3) y jueves (4).
+const NO_NIGHT = ["OSNEILING", "RAFAEL"];
+const NO_NIGHT_DAYS = [2, 3, 4];
+const nightBlocked = (p, wd) => NO_NIGHT.includes(p) && NO_NIGHT_DAYS.includes(wd);
 
 const $ = id => document.getElementById(id);
 const pad = n => String(n).padStart(2, "0");
@@ -237,32 +252,59 @@ const dayIndex = (d, start) => Math.round((Date.UTC(d.getFullYear(), d.getMonth(
 
 const today = new Date();
 const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-const state = { p: 1, start: toISO(new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth(), 1 - mod(firstOfMonth.getDay() - 1, 7))), month: `${today.getFullYear()}-${pad(today.getMonth() + 1)}` };
+const state = { p: 1, start: toISO(new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth(), 1 - mod(firstOfMonth.getDay() - 1, 7))), month: `${today.getFullYear()}-${pad(today.getMonth() + 1)}`, edits: {} };
 try {
-  const saved = JSON.parse(localStorage.getItem("turnos-v2") || "{}");
+  const saved = JSON.parse(localStorage.getItem("turnos-v3") || "{}");
   Object.assign(state, saved);
 } catch (e) {}
 
-function save() { try { localStorage.setItem("turnos-v2", JSON.stringify(state)); } catch (e) {} }
+function save() { try { localStorage.setItem("turnos-v3", JSON.stringify(state)); } catch (e) {} }
 
+function editsFor(p) { return (state.edits[p] = state.edits[p] || {}); }
+
+// Calendario efectivo (patrón + cambios manuales) desde el inicio hasta fin de mes.
 function monthData() {
   const [y, m] = state.month.split("-").map(Number);
   const first = new Date(y, m - 1, 1);
   const days = new Date(y, m, 0).getDate();
   const start = parseISO(state.start);
   const lastIdx = dayIndex(new Date(y, m - 1, days), start);
-  const sched = lastIdx >= 0 ? PROPOSALS[state.p].build(lastIdx + 1) : [];
+  const base = lastIdx >= 0 ? PROPOSALS[state.p].build(lastIdx + 1, start) : [];
+  const edits = editsFor(state.p);
+  const sched = base.map((b, i) => {
+    const e = edits[toISO(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i))] || {};
+    return {
+      base: b,
+      day: b.day.map((p, k) => e["d" + k] || p),
+      night: b.night.map((p, k) => e["n" + k] || p)
+    };
+  });
   const rows = [];
   for (let d = 1; d <= days; d++) {
     const date = new Date(y, m - 1, d);
     const idx = dayIndex(date, start);
-    rows.push({ date, shift: idx >= 0 ? sched[idx] : null });
+    const shift = idx >= 0 ? sched[idx] : null;
+    rows.push({ date, shift, warn: shift ? validate(shift, idx > 0 ? sched[idx - 1] : null, date.getDay()) : [] });
   }
   return { first, rows };
 }
 
+function validate(shift, prev, wd) {
+  const w = [];
+  const all = shift.day.concat(shift.night);
+  all.forEach((p, i) => { if (all.indexOf(p) !== i) w.push(`${p} tiene dos turnos el mismo día`); });
+  if (prev) shift.day.forEach(p => { if (prev.night.includes(p)) w.push(`${p} sale de noche y entra de día`); });
+  if (state.p === 3) shift.night.forEach(p => { if (nightBlocked(p, wd)) w.push(`${p} no puede hacer noche martes, miércoles ni jueves`); });
+  return [...new Set(w)];
+}
+
 const dot = p => `<i class="dot" style="background:${COLORS[p]}"></i>`;
-const names = list => list.map(p => `<b>${dot(p)}${p}</b>`).join(" ");
+
+function slotHTML(iso, slot, value, baseValue) {
+  const opts = ALL.map(p => `<option value="${p}"${p === value ? " selected" : ""}>${p}</option>`).join("");
+  const edited = value !== baseValue;
+  return `<span class="slot${edited ? " edited" : ""}" title="${edited ? "Cambiado (patrón: " + baseValue + ")" : "Cambiar analista"}">${dot(value)}<select data-iso="${iso}" data-slot="${slot}" aria-label="Analista">${opts}</select></span>`;
+}
 
 function render() {
   const P = PROPOSALS[state.p];
@@ -287,21 +329,31 @@ function render() {
 
   const todayISO = toISO(new Date());
   const counts = Object.fromEntries(ALL.map(p => [p, { d: 0, n: 0 }]));
-  rows.forEach(({ date, shift }) => {
+  let warnings = 0, edited = 0;
+  rows.forEach(({ date, shift, warn }) => {
+    const iso = toISO(date);
     const c = document.createElement("div");
-    c.className = "cell" + (toISO(date) === todayISO ? " today" : "");
+    c.className = "cell" + (iso === todayISO ? " today" : "") + (warn.length ? " warn" : "");
     const wd = date.toLocaleDateString("es", { weekday: "long" });
-    c.innerHTML = `<div class="date"><span class="wd">${wd} </span>${date.getDate()}</div>`;
+    let html = `<div class="date"><span class="wd">${wd} </span>${date.getDate()}</div>`;
     if (shift) {
-      c.innerHTML += `<div class="shift d">☀ ${names(shift.day)}</div>`;
-      c.innerHTML += `<div class="shift n">☾ ${names(shift.night)}</div>`;
-      shift.day.forEach(p => counts[p].d++);
-      shift.night.forEach(p => counts[p].n++);
+      html += `<div class="shift d">☀ ${shift.day.map((p, k) => slotHTML(iso, "d" + k, p, shift.base.day[k])).join("")}</div>`;
+      html += `<div class="shift n">☾ ${shift.night.map((p, k) => slotHTML(iso, "n" + k, p, shift.base.night[k])).join("")}</div>`;
+      if (warn.length) html += `<div class="warn-msg">⚠ ${warn.join(" · ")}</div>`;
+      shift.day.forEach((p, k) => { counts[p].d++; if (p !== shift.base.day[k]) edited++; });
+      shift.night.forEach((p, k) => { counts[p].n++; if (p !== shift.base.night[k]) edited++; });
+      warnings += warn.length;
     } else {
-      c.innerHTML += `<div class="shift none">Antes del inicio</div>`;
+      html += `<div class="shift none">Antes del inicio</div>`;
     }
+    c.innerHTML = html;
     grid.appendChild(c);
   });
+
+  $("status").innerHTML =
+    `${edited ? `${edited} turno(s) cambiado(s) este mes.` : "Sin cambios manuales: se muestra el patrón."} ` +
+    (warnings ? `<span class="bad">⚠ ${warnings} alerta(s) por revisar.</span>` : "");
+  $("reset").hidden = !Object.keys(editsFor(state.p)).length;
 
   $("summary").innerHTML =
     `<thead><tr><th>Analista</th><th class="num">Días</th><th class="num">Noches</th><th class="num">Total turnos</th><th class="num">Horas</th></tr></thead><tbody>` +
@@ -317,6 +369,23 @@ function shiftMonth(delta) {
   render();
 }
 
+$("grid").addEventListener("change", e => {
+  const sel = e.target.closest("select[data-iso]");
+  if (!sel) return;
+  const { iso, slot } = sel.dataset;
+  const start = parseISO(state.start);
+  const idx = dayIndex(parseISO(iso), start);
+  const b = PROPOSALS[state.p].build(idx + 1, start)[idx];
+  const baseValue = (slot[0] === "d" ? b.day : b.night)[Number(slot.slice(1))];
+  const edits = editsFor(state.p);
+  const day = Object.assign({}, edits[iso]);
+  if (sel.value === baseValue) delete day[slot]; else day[slot] = sel.value;
+  if (Object.keys(day).length) edits[iso] = day; else delete edits[iso];
+  render();
+});
+$("reset").addEventListener("click", () => {
+  if (confirm("¿Quitar todos los cambios manuales de esta propuesta y volver al patrón?")) { state.edits[state.p] = {}; render(); }
+});
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => { state.p = Number(t.dataset.p); render(); }));
 $("start").addEventListener("change", e => { if (e.target.value) { state.start = e.target.value; render(); } });
 $("month").addEventListener("change", e => { if (e.target.value) { state.month = e.target.value; render(); } });
@@ -324,8 +393,12 @@ $("prev").addEventListener("click", () => shiftMonth(-1));
 $("next").addEventListener("click", () => shiftMonth(1));
 $("csv").addEventListener("click", () => {
   const { rows } = monthData();
-  const lines = ["Fecha;Turno de día (08:00-16:00);Turno de noche (16:00-08:00)"];
-  rows.forEach(({ date, shift }) => { if (shift) lines.push(`${toISO(date)};${shift.day.join(" / ")};${shift.night.join(" / ")}`); });
+  const lines = ["Fecha;Turno de día (08:00-16:00);Turno de noche (16:00-08:00);Alertas"];
+  rows.forEach(({ date, shift, warn }) => { if (shift) lines.push(`${toISO(date)};${shift.day.join(" / ")};${shift.night.join(" / ")};${warn.join(" / ")}`); });
+  lines.push("", "Analista;Días;Noches;Horas");
+  const counts = Object.fromEntries(ALL.map(p => [p, { d: 0, n: 0 }]));
+  rows.forEach(({ shift }) => { if (shift) { shift.day.forEach(p => counts[p].d++); shift.night.forEach(p => counts[p].n++); } });
+  ALL.forEach(p => lines.push(`${p};${counts[p].d};${counts[p].n};${counts[p].d * HOURS.d + counts[p].n * HOURS.n}`));
   const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
