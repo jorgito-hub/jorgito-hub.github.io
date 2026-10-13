@@ -2746,13 +2746,20 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <label for="inputDescNovedad">Descripción breve</label>
     <textarea id="inputDescNovedad" maxlength="300" placeholder="Ej: Corte de energía de 2 minutos en sala de servidores"></textarea>
 
-    <div id="bloqueGrupoNovedad" style="display:none;">
-      <label for="selectGrupoNovedad">Visible para</label>
-      <select id="selectGrupoNovedad" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:inherit; margin-bottom:8px;">
-        <option value="MG">Analistas de Managua (MG)</option>
-        <option value="LN">Analistas de León (LN)</option>
-        <option value="TODOS">Ambos grupos</option>
-      </select>
+    <!-- Solo Jorge Quintana: publicar como otro analista y elegir quién la ve -->
+    <div id="bloqueGrupoNovedad" style="display:none; gap:12px; margin-bottom:8px;">
+      <div style="flex:1; min-width:0;">
+        <label for="selectAutorNovedad">Publicar como</label>
+        <select id="selectAutorNovedad" onchange="sugerirGrupoSegunAutor()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:inherit;"></select>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <label for="selectGrupoNovedad">Visible para</label>
+        <select id="selectGrupoNovedad" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:inherit;">
+          <option value="MG">Analistas de Managua (MG)</option>
+          <option value="LN">Analistas de León (LN)</option>
+          <option value="TODOS">Ambos grupos</option>
+        </select>
+      </div>
     </div>
 
     <label>Calificación</label>
@@ -7790,9 +7797,18 @@ function iniciarSistemaPausaActiva(){
     }
     document.getElementById("inputTituloNovedad").value = "";
     document.getElementById("inputDescNovedad").value = "";
-    // Solo Jorge Quintana elige para qué grupo publica.
+    // Solo Jorge Quintana elige como quién publica y para qué grupo.
     const bloqueGrupo = document.getElementById("bloqueGrupoNovedad");
-    if (bloqueGrupo) bloqueGrupo.style.display = esJorgeQuintana() ? "block" : "none";
+    if (bloqueGrupo) bloqueGrupo.style.display = esJorgeQuintana() ? "flex" : "none";
+    if (esJorgeQuintana()) {
+      const selAutor = document.getElementById("selectAutorNovedad");
+      // Mismos usuarios que el login (lista oculta #selectorNombres).
+      const nombres = Array.from(document.getElementById("selectorNombres").options)
+        .map(o => o.value).filter(Boolean);
+      selAutor.innerHTML = nombres.map(n => `<option value="${n}">${n}</option>`).join("");
+      selAutor.value = "Jorge Quintana";
+      document.getElementById("selectGrupoNovedad").value = "MG";
+    }
     calificacionSeleccionada = 0;
     renderEstrellasInput();
     document.getElementById("modalNovedad").style.display = "flex";
@@ -7834,6 +7850,14 @@ function iniciarSistemaPausaActiva(){
   }
 
   /* ---------- Guardar nueva novedad ---------- */
+  // Al elegir "Publicar como", se sugiere "Visible para" el grupo de ese
+  // analista (para que pueda ver su propia novedad); Jorge puede cambiarlo.
+  window.sugerirGrupoSegunAutor = function () {
+    const autor = document.getElementById("selectAutorNovedad")?.value;
+    if (!autor || autor === "Jorge Quintana") return;
+    document.getElementById("selectGrupoNovedad").value = perfilDeUsuario(autor);
+  };
+
   window.guardarNovedad = function () {
     const titulo = document.getElementById("inputTituloNovedad").value.trim();
     const descripcion = document.getElementById("inputDescNovedad").value.trim();
@@ -7842,7 +7866,11 @@ function iniciarSistemaPausaActiva(){
     if (!descripcion) { alert("Ingresa una breve descripción."); return; }
     if (calificacionSeleccionada < 1) { alert("Selecciona una calificación de 1 a 5 estrellas."); return; }
 
-    const usuario = window.usuarioSeleccionado || "";
+    // Autor: el usuario en sesión, o el elegido en "Publicar como"
+    // (opción exclusiva de Jorge Quintana).
+    const usuario = esJorgeQuintana()
+      ? (document.getElementById("selectAutorNovedad")?.value || window.usuarioSeleccionado)
+      : (window.usuarioSeleccionado || "");
     const nueva = {
       id: `nv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       titulo,
