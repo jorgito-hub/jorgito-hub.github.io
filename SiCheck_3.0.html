@@ -2032,6 +2032,91 @@ canvas[id^="firma"] {
   animation:floatIcon 2s ease-in-out infinite;
 }
 
+/* ================================= */
+/* COLORES DE LOS AVISOS              */
+/* Bienvenida (recibir llave): verde  */
+/* Pausa activa: amarillo             */
+/* Relevo (entregar llave): rojo      */
+/* ================================= */
+.modal-pausa-contenido.aviso-verde{
+  background:linear-gradient(145deg,#2e7d32,#43a047);
+}
+.modal-pausa-contenido.aviso-amarillo{
+  background:linear-gradient(145deg,#fbc02d,#ffe082);
+}
+.modal-pausa-contenido.aviso-rojo{
+  background:linear-gradient(145deg,#b71c1c,#e53935);
+}
+.aviso-verde .pausa-header,
+.aviso-verde .pausa-mensaje,
+.aviso-rojo .pausa-header,
+.aviso-rojo .pausa-mensaje{
+  color:#ffffff;
+}
+.aviso-amarillo .pausa-header,
+.aviso-amarillo .pausa-mensaje{
+  color:#3e2f00;
+}
+/* Botón: blanco con letra del color del aviso */
+.aviso-verde .btn-pausa,
+.aviso-rojo .btn-pausa,
+.aviso-amarillo .btn-pausa{
+  background:#ffffff;
+}
+.aviso-verde .btn-pausa{ color:#2e7d32; }
+.aviso-rojo .btn-pausa{ color:#b71c1c; }
+.aviso-amarillo .btn-pausa{ color:#7a5c00; }
+.aviso-verde .btn-pausa:hover,
+.aviso-rojo .btn-pausa:hover,
+.aviso-amarillo .btn-pausa:hover{
+  background:#f3f3f3;
+}
+
+/* 🚗 Carretera animada del aviso de relevo: el auto avanza de derecha a
+   izquierda (hacia donde mira el emoji), con un leve rebote como si
+   fuera rodando, y las líneas de la vía se desplazan. */
+.relevo-carretera{
+  position:relative;
+  height:90px;
+  margin:6px 0 22px;
+  overflow:hidden;
+  border-radius:12px;
+  background:rgba(0,0,0,0.18);
+}
+.relevo-carretera::after{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:16px;
+  height:4px;
+  background:repeating-linear-gradient(90deg,#ffffff 0 28px,transparent 28px 56px);
+  opacity:0.8;
+  animation:lineasCarretera 0.6s linear infinite;
+}
+.relevo-auto{
+  position:absolute;
+  bottom:18px;
+  font-size:56px;
+  line-height:1;
+  animation:autoAvanza 4s linear infinite;
+}
+@keyframes autoAvanza{
+  0%  { left:105%; transform:translateY(0); }
+  10% { transform:translateY(-3px); }
+  20% { transform:translateY(0); }
+  30% { transform:translateY(-3px); }
+  40% { transform:translateY(0); }
+  50% { transform:translateY(-3px); }
+  60% { transform:translateY(0); }
+  70% { transform:translateY(-3px); }
+  80% { transform:translateY(0); }
+  90% { transform:translateY(-3px); }
+  100%{ left:-20%; transform:translateY(0); }
+}
+@keyframes lineasCarretera{
+  from{ background-position:0 0; }
+  to  { background-position:56px 0; }
+}
+
 @keyframes floatIcon{
   0%{transform:translateY(0px);}
   50%{transform:translateY(-8px);}
@@ -3048,7 +3133,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <div id="modalPausaActiva" class="modal-pausa">
 
-  <div class="modal-pausa-contenido">
+  <div class="modal-pausa-contenido aviso-amarillo">
 
     <button class="cerrar-pausa" id="cerrarModalPausa">✖</button>
 
@@ -3077,7 +3162,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <!-- MODAL BIENVENIDA (al iniciar sesión, sin botón X) -->
 <div id="modalBienvenida" class="modal-pausa">
-  <div class="modal-pausa-contenido">
+  <div class="modal-pausa-contenido aviso-verde">
     <div class="pausa-header" id="tituloBienvenida">¡BIENVENIDO!</div>
     <div class="pausa-icono">🗝️</div>
     <div class="pausa-mensaje">
@@ -3104,9 +3189,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <!-- MODAL RECORDATORIO DE RELEVO (15:40 y 07:40) -->
 <div id="modalRelevo" class="modal-pausa">
-  <div class="modal-pausa-contenido">
+  <div class="modal-pausa-contenido aviso-rojo">
     <div class="pausa-header">TU COMPAÑERO DE RELEVO ESTÁ POR LLEGAR.</div>
-    <div class="pausa-icono">🗝️</div>
+    <!-- 🚗 Auto en movimiento sobre una carretera -->
+    <div class="relevo-carretera" aria-hidden="true">
+      <span class="relevo-auto">🚗</span>
+    </div>
     <div class="pausa-mensaje">
       No olvides <strong>ENTREGAR LLAVE</strong> antes de <strong>SALIR</strong>.
     </div>
