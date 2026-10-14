@@ -374,8 +374,57 @@ input[type="checkbox"]:checked::after {
 .btn-diagonal:disabled {
   cursor: not-allowed;
 }
-.btn-diagonal.btn-activo {
-  background: linear-gradient(135deg, #00cc00, #009900);
+/* ---- Botón disponible: neón de su propio color + resto de la página opaco ---- */
+.btn-diagonal-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  position: relative;
+}
+.btn-diagonal-wrap > .btn-diagonal {
+  flex: 1 1 auto;
+}
+#capaFocoBoton {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 25, 0.62);
+  z-index: 50;
+  pointer-events: none;   /* solo oscurece: la página sigue usable */
+}
+#capaFocoBoton.visible {
+  display: block;
+  animation: aparecerFoco 0.4s ease;
+}
+@keyframes aparecerFoco { from { opacity: 0; } to { opacity: 1; } }
+/* El botón disponible queda por encima de la capa oscura */
+.btn-diagonal-wrap.btn-foco {
+  z-index: 51;
+  --neon: #ffffff;
+  animation: resplandorNeon 1.6s ease-in-out infinite alternate;
+}
+.btn-diagonal-wrap.btn-foco > .btn-diagonal {
+  box-shadow: none;
+}
+@keyframes resplandorNeon {
+  from { filter: drop-shadow(0 0 4px var(--neon-brillo)) drop-shadow(0 0 10px var(--neon-brillo)) drop-shadow(0 0 18px var(--neon-brillo)); }
+  to   { filter: drop-shadow(0 0 7px var(--neon-brillo)) drop-shadow(0 0 18px var(--neon-brillo)) drop-shadow(0 0 32px var(--neon-brillo)); }
+}
+/* Último minuto: el botón parpadea entre rojo y su color activo (el
+   resplandor acompaña al parpadeo); la capa oscura se mantiene. */
+.btn-diagonal-wrap.btn-foco-cerrando {
+  animation: resplandorCerrando 0.9s ease-in-out infinite alternate;
+}
+.btn-diagonal-wrap.btn-foco-cerrando > .btn-diagonal {
+  animation: parpadeoCerrando 0.9s ease-in-out infinite alternate;
+}
+@keyframes parpadeoCerrando {
+  from { background: var(--neon); }
+  to   { background: var(--rojo-cierre, #e00000); }
+}
+@keyframes resplandorCerrando {
+  from { filter: drop-shadow(0 0 6px var(--neon-brillo)) drop-shadow(0 0 16px var(--neon-brillo)) drop-shadow(0 0 28px var(--neon-brillo)); }
+  to   { filter: drop-shadow(0 0 6px var(--rojo-cierre, #e00000)) drop-shadow(0 0 16px var(--rojo-cierre, #e00000)) drop-shadow(0 0 28px var(--rojo-cierre, #e00000)); }
 }
 /* Reporte ya completado o cuya hora ya pasó: gris con letra muy tenue */
 .btn-diagonal.btn-check-finalizado {
@@ -1859,15 +1908,6 @@ canvas[id^="firma"] {
   position: relative; /* Necesario para ubicar el tooltip */
 }
 
-/* ⏳ Último minuto antes de que se cierre la ventana de un Reporte
-   (y aún no se completó el checklist) */
-.btnCHECK-por-cerrar {
-  animation: parpadeoPorCerrar 0.9s ease-in-out infinite alternate;
-}
-@keyframes parpadeoPorCerrar {
-  from { background: linear-gradient(135deg, #00cc00, #009900, #00ff66); }
-  to   { background: #dc3545; }
-}
 
 /* Tooltip CHECKLIST COMPLETADO */
 .btn-bloqueado .tooltip-text {
@@ -2735,6 +2775,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 <!-- Barra de botones fija -->
 <div class="barra-fija" style="position: fixed; top: 0; left: 0; width: 100%; background: white; z-index: 999; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
 
+  <!-- Capa oscura de "foco": cubre toda la página mientras un botón está
+       disponible, dejando solo ese botón iluminado (no bloquea clics). -->
+  <div id="capaFocoBoton" aria-hidden="true"></div>
+
   <div id="VistaHome" style="display:block;">
 
   <div class="banner-nuevo">
@@ -2771,11 +2815,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       </div>
 
       <div class="banner-botones-progreso-bloque">
+        <!-- Cada botón va dentro de un "wrap": el resplandor neón se dibuja en
+             el wrap para que siga la forma diagonal del botón (el clip-path
+             del botón recortaría cualquier sombra propia). -->
         <div class="banner-botones-horario">
-          <button class="btn-diagonal" id="btnCHECK1" onclick="mostrarChecklist(this)"></button>
-          <button class="btn-diagonal" id="btnCHECK2" onclick="mostrarChecklist(this)"></button>
-          <button class="btn-diagonal" id="btnCHECK3" onclick="mostrarChecklist(this)"></button>
-          <button class="btn-diagonal btn-diagonal-informe" id="btnInformePNG" onclick="generarInformePNG()"></button>
+          <span class="btn-diagonal-wrap"><button class="btn-diagonal" id="btnCHECK1" onclick="mostrarChecklist(this)"></button></span>
+          <span class="btn-diagonal-wrap"><button class="btn-diagonal" id="btnCHECK2" onclick="mostrarChecklist(this)"></button></span>
+          <span class="btn-diagonal-wrap"><button class="btn-diagonal" id="btnCHECK3" onclick="mostrarChecklist(this)"></button></span>
+          <span class="btn-diagonal-wrap"><button class="btn-diagonal btn-diagonal-informe" id="btnInformePNG" onclick="generarInformePNG()"></button></span>
         </div>
         <div class="banner-progreso-contenedor">
           <div id="bannerProgresoBarra" class="banner-progreso-barra"></div>
@@ -4169,6 +4216,8 @@ function actualizarBotonesCheck() {
   const ahora = new Date();
   const totalMin = ahora.getHours() * 60 + ahora.getMinutes();
 
+  let botonesEnFoco = 0;
+
    // Revisar cada botón
   Object.keys(horarios).forEach(id => {
     const btn = document.getElementById(id);
@@ -4232,12 +4281,6 @@ if (!enHorario) {
     btn.disabled = !enHorario || statEnEspera;
     btn.setAttribute('data-tooltip', tooltipMsg);
 
-    // 🟢 Resaltar en verde el botón que está actualmente habilitado
-    // (diseño nuevo con esquinas diagonales), salvo el de Informe que
-    // conserva su color rojo propio.
-    if (id !== "btnInformePNG" && btn.classList.contains("btn-diagonal")) {
-      btn.classList.toggle("btn-activo", enHorario);
-    }
 
     // Si estaba deshabilitado y ahora se habilitó → sonar alarma
     // (solo al abrirse la ventana horaria, no al terminar la espera de STAT)
@@ -4251,10 +4294,33 @@ if (!enHorario) {
 
     // ⏳ Parpadeo en el último minuto: solo para los botones de Reporte, y
     // solo si aún no se completó ese checklist (btn-bloqueado = ya ejecutado).
+    if (["btnCHECK1", "btnCHECK2", "btnCHECK3", "btnInformePNG"].includes(id)) {
+      const yaCompletado = btn.classList.contains("btn-bloqueado");
+      // ✨ Disponible: neón de su propio color y el resto de la página opaco.
+      // Último minuto: parpadeo entre rojo y su color activo.
+      const enFoco = enHorario && !yaCompletado;
+      const porCerrar = enFoco && segundosRestantesActivo !== null && segundosRestantesActivo <= 60;
+      const wrap = btn.parentElement;
+      if (wrap && wrap.classList.contains("btn-diagonal-wrap")) {
+        wrap.classList.toggle("btn-foco", enFoco);
+        wrap.classList.toggle("btn-foco-cerrando", porCerrar);
+        if (enFoco) {
+          const esInforme = id === "btnInformePNG";
+          const colorActivo = esInforme ? "#e63946"
+            : (typeof colorFranjaHoraria === "function" ? colorFranjaHoraria() : "#0066cc");
+          wrap.style.setProperty("--neon", colorActivo);
+          // Brillo del neón: mismo tono; el azul nocturno es muy oscuro para
+          // resplandecer sobre la capa oscura, así que brilla en un azul vivo.
+          wrap.style.setProperty("--neon-brillo", colorActivo.toUpperCase() === "#1A237E" ? "#536DFE" : colorActivo);
+          // El Informe ya es rojo: su parpadeo alterna con un rojo oscuro.
+          wrap.style.setProperty("--rojo-cierre", esInforme ? "#5c0000" : "#e00000");
+        }
+        if (enFoco) botonesEnFoco++;
+      }
+    }
+
     if (["btnCHECK1", "btnCHECK2", "btnCHECK3"].includes(id)) {
       const yaCompletado = btn.classList.contains("btn-bloqueado");
-      const porCerrar = enHorario && !yaCompletado && segundosRestantesActivo !== null && segundosRestantesActivo <= 60;
-      btn.classList.toggle("btnCHECK-por-cerrar", porCerrar);
 
       // 🎨 Color de los Reportes: el de la franja horaria (día/tarde/noche,
       // igual que el badge de turno) mientras su hora no ha llegado; verde
@@ -4266,9 +4332,21 @@ if (!enHorario) {
       const yaPaso = !enHorario && rangoTurno && minutosEnTurno >= rangoTurno.fin;
       const finalizado = yaCompletado || yaPaso;
       btn.classList.toggle("btn-check-finalizado", finalizado);
-      btn.style.background = (finalizado || enHorario || typeof colorFranjaHoraria !== "function") ? "" : colorFranjaHoraria();
+      // Mientras está disponible conserva su color de franja (ya no verde).
+      btn.style.background = (finalizado || typeof colorFranjaHoraria !== "function") ? "" : colorFranjaHoraria();
     }
   });
+
+  // 🌑 Capa oscura de foco: visible mientras haya un botón disponible y el
+  // analista esté en Home (no en el login ni llenando un checklist).
+  const capaFoco = document.getElementById("capaFocoBoton");
+  if (capaFoco) {
+    const home = document.getElementById("VistaHome");
+    const login = document.getElementById("loginView");
+    const enHome = home && home.style.display !== "none" && getComputedStyle(home).display !== "none";
+    const enLogin = login && getComputedStyle(login).display !== "none";
+    capaFoco.classList.toggle("visible", botonesEnFoco > 0 && enHome && !enLogin);
+  }
 
   // 🗝️ ENTREGAR LLAVE: ya no depende de una ventana horaria fija — se puede
   // entregar en cualquier momento del turno propio del usuario (para pasar
