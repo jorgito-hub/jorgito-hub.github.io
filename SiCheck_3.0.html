@@ -1067,6 +1067,32 @@ input[type="checkbox"]:checked::after {
   font-style:italic;
   padding:2px 0 6px 0;
 }
+.comentar-como {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin:0 0 6px 4px;
+  padding:3px 4px 3px 10px;
+  background:#e6f4f5;
+  border:1px solid #b6dfe2;
+  border-radius:14px;
+  font-size:12px;
+  font-weight:700;
+  color:#00838D;
+}
+.comentar-como span {
+  white-space:nowrap;
+}
+.comentar-como select {
+  border:none;
+  background:#ffffff;
+  border-radius:10px;
+  padding:2px 6px;
+  font-size:12px;
+  font-family:inherit;
+  color:#1f2a30;
+  cursor:pointer;
+}
 .comentarios-input {
   display:flex;
   align-items:flex-end;
@@ -6938,6 +6964,7 @@ function iniciarSistemaPausaActiva(){
         </div>
         <div class="comentarios-panel" id="comentarios-${nv.id}" style="display:${panelesComentariosAbiertos.has(nv.id) ? "block" : "none"};">
           <div class="comentarios-lista" id="comentarios-lista-${nv.id}">${renderListaComentarios(comentarios, nv.id)}</div>
+          ${renderComentarComo(nv.id)}
           <div class="comentarios-input">
             <textarea id="comentario-input-${nv.id}" placeholder="Escribe un comentario..." rows="1"
               oninput="guardarBorradorComentario('${nv.id}', this)"
@@ -7870,8 +7897,34 @@ function iniciarSistemaPausaActiva(){
     }
   };
 
+  /* ---------- "Comentar como" (exclusivo de Jorge Quintana) ---------- */
+  // Analista elegido por novedad; se conserva aunque las tarjetas se redibujen.
+  const autorComentarioPorNovedad = {};
+
+  function renderComentarComo(novedadId) {
+    if (!esJorgeQuintana()) return "";
+    const elegido = autorComentarioPorNovedad[novedadId] || "Jorge Quintana";
+    const nombres = Array.from(document.getElementById("selectorNombres")?.options || [])
+      .map(o => o.value).filter(Boolean);
+    return `
+      <div class="comentar-como">
+        <span>Comentar como:</span>
+        <select onchange="elegirAutorComentario('${novedadId}', this.value)">
+          ${nombres.map(n => `<option value="${escaparHTML(n)}" ${n === elegido ? "selected" : ""}>${escaparHTML(n)}</option>`).join("")}
+        </select>
+      </div>`;
+  }
+
+  window.elegirAutorComentario = function (novedadId, nombre) {
+    autorComentarioPorNovedad[novedadId] = nombre;
+  };
+
   window.enviarComentario = function (id) {
-    const usuario = window.usuarioSeleccionado;
+    // Autor: el usuario en sesión, o el elegido en "Comentar como" (solo
+    // Jorge Quintana); los demás verán el comentario como de ese analista.
+    const usuario = esJorgeQuintana()
+      ? (autorComentarioPorNovedad[id] || window.usuarioSeleccionado)
+      : window.usuarioSeleccionado;
     if (!usuario) {
       alert("Selecciona tu usuario antes de comentar.");
       return;
@@ -7894,6 +7947,8 @@ function iniciarSistemaPausaActiva(){
     // El propio remitente ya "vio" todos los comentarios actuales al escribir el suyo.
     if (!novedades[idx].comentariosLeidosPor) novedades[idx].comentariosLeidosPor = {};
     novedades[idx].comentariosLeidosPor[usuario] = novedades[idx].comentarios.length;
+    // Jorge también queda al día aunque haya comentado como otro analista.
+    if (window.usuarioSeleccionado) novedades[idx].comentariosLeidosPor[window.usuarioSeleccionado] = novedades[idx].comentarios.length;
     guardarNovedadesArray(novedades);
 
     input.value = "";
