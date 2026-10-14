@@ -3828,6 +3828,10 @@ function generarInformePNG() {
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
+      // ✅ Marcar el Informe como ya descargado en esta ventana de 5 min:
+      // pasa a gris y se quita el neón / la penumbra de inmediato.
+      localStorage.setItem("informeTurnoDescargadoHasta", String(Date.now() + 6 * 60 * 1000));
+      if (typeof actualizarBotonesCheck === "function") actualizarBotonesCheck();
       terminar();
     }, "image/png");
   }).catch(err => {
@@ -4295,7 +4299,12 @@ if (!enHorario) {
     // ⏳ Parpadeo en el último minuto: solo para los botones de Reporte, y
     // solo si aún no se completó ese checklist (btn-bloqueado = ya ejecutado).
     if (["btnCHECK1", "btnCHECK2", "btnCHECK3", "btnInformePNG"].includes(id)) {
-      const yaCompletado = btn.classList.contains("btn-bloqueado");
+      // Ya usado: Reporte con checklist enviado (btn-bloqueado) o Informe ya
+      // descargado en esta ventana.
+      const informeHecho = id === "btnInformePNG" &&
+        Number(localStorage.getItem("informeTurnoDescargadoHasta") || 0) > Date.now();
+      if (id === "btnInformePNG") btn.classList.toggle("btn-check-finalizado", informeHecho);
+      const yaCompletado = btn.classList.contains("btn-bloqueado") || informeHecho;
       // ✨ Disponible: neón de su propio color y el resto de la página opaco.
       // Último minuto: parpadeo entre rojo y su color activo.
       const enFoco = enHorario && !yaCompletado;
