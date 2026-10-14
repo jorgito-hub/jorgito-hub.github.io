@@ -186,7 +186,7 @@ input[type="checkbox"]:checked::after {
   background: #87CEEB;
   color: #000;
   font-weight: 900;
-  font-size: 34px;
+  font-size: 46px;
   text-align: center;
   line-height: 1.1;
   padding: 10px 6px;
@@ -2204,6 +2204,16 @@ const STORAGE_KEY_DASHBOARD = "soc_dashboard_data";
     return perfilDeUsuario(window.usuarioSeleccionado);
   }
 
+  // 🌤️ Franja del día — única fuente para el saludo, el ícono y los
+  // colores del encabezado y los botones:
+  // Día 05:00–11:59 · Tarde 12:00–17:59 · Noche 18:00–04:59.
+  function franjaHoraria() {
+    const hora = new Date().getHours();
+    if (hora >= 5 && hora < 12) return "dia";
+    if (hora >= 12 && hora < 18) return "tarde";
+    return "noche";
+  }
+
   // 🔒 Visibilidad de novedades por grupo: cada novedad pertenece al grupo
   // de quien la creó ("MG" o "LN"; las de Jorge Quintana pueden ser
   // "TODOS"). Las novedades antiguas sin grupo se asignan según su creador.
@@ -4069,58 +4079,39 @@ function tiempoRestante(finHora, finMin) {
   };
 }
 
-// Configuración de ventanas de habilitación por botón
+// Configuración de ventanas de habilitación por botón.
+// Cada ventana va de `inicio` (incluido) a `fin` (excluido), en minutos
+// desde la medianoche (más de 1440 = día siguiente). Así cada Reporte
+// dura EXACTAMENTE 30 minutos y el Informe EXACTAMENTE 5.
+const DURACION_REPORTE_MIN = 30;
+const DURACION_INFORME_MIN = 5;
+const ventanaHoraria = (hora, minuto, duracion) => ({ inicio: hora * 60 + minuto, fin: hora * 60 + minuto + duracion });
 const horarios = {
-  // Diurno: 08:15 | Nocturno: 16:15 (30 minutos)
-  btnCHECK1: [
-    { inicio: 08 * 60 + 15, fin: 08 * 60 + 45 },
-    { inicio: 16 * 60 + 15, fin: 16 * 60 + 45 }],
+  // Diurno: 10:00 a.m. | Nocturno: 06:00 p.m.
+  btnCHECK1: [ventanaHoraria(10, 0, DURACION_REPORTE_MIN), ventanaHoraria(18, 0, DURACION_REPORTE_MIN)],
 
-  // Diurno: 13:15 | Nocturno: 23:00 (30 minutos)
-  btnCHECK2: [
-    { inicio: 13 * 60 + 15, fin: 13 * 60 + 45 },
-    { inicio: 23 * 60 + 00, fin: 23 * 60 + 30 }],
+  // Diurno: 01:00 p.m. | Nocturno: 10:00 p.m.
+  btnCHECK2: [ventanaHoraria(13, 0, DURACION_REPORTE_MIN), ventanaHoraria(22, 0, DURACION_REPORTE_MIN)],
 
-  // Diurno: 15:45 | Nocturno: 07:45 (día siguiente, notación extendida 31:45)
-  btnCHECK3: [
-    { inicio: 15 * 60 + 45, fin: 15 * 60 + 55 },
-    { inicio: 31 * 60 + 45, fin: 31 * 60 + 55 }],
+  // Diurno: 03:00 p.m. | Nocturno: 06:00 a.m. (día siguiente, notación extendida 30:00)
+  btnCHECK3: [ventanaHoraria(15, 0, DURACION_REPORTE_MIN), ventanaHoraria(30, 0, DURACION_REPORTE_MIN)],
 
   STAT: [
     { inicio: 08 * 60 + 00, fin: 15 * 60 + 55 },   // 09:00 - 09:30
     { inicio: 16 * 60 + 00, fin: 31 * 60 + 55 }],  // 30:00 - 30:20 (día siguiente)
 
-  // Diurno: 15:55 | Nocturno: 07:55 (día siguiente, notación extendida 31:55)
-  btnInformePNG: [
-    { inicio: 15 * 60 + 55, fin: 16 * 60 + 05 },
-    { inicio: 31 * 60 + 55, fin: 32 * 60 + 05 } ]
+  // Informe — Diurno: 03:55 p.m. | Nocturno: 07:55 a.m. (notación extendida 31:55)
+  btnInformePNG: [ventanaHoraria(15, 55, DURACION_INFORME_MIN), ventanaHoraria(31, 55, DURACION_INFORME_MIN)]
 
 };
 
 // Etiquetas de horario que se muestran en tiempo real sobre cada botón,
 // según el turno actual (Diurno/Nocturno) — igual que el saludo y la fecha.
 const ETIQUETAS_REPORTES = {
-  diurno:   ["08:15 a.m.", "01:15 p.m.", "03:45 p.m."],
-  nocturno: ["04:15 p.m.", "11:00 p.m.", "07:45 a.m."]
+  diurno:   ["10:00 a.m.", "01:00 p.m.", "03:00 p.m."],
+  nocturno: ["06:00 p.m.", "10:00 p.m.", "06:00 a.m."]
 };
 const ETIQUETA_RESUMEN = { diurno: "03:55 p.m.", nocturno: "07:55 a.m." };
-
-// 👥 Horarios por perfil: el perfil León (LN) solo cambia el Reporte 1
-// (11:00 a.m. diurno / 07:00 p.m. nocturno); Reportes 2 y 3 e Informe son
-// iguales a Managua (MG). Se aplica al iniciar sesión.
-const REPORTE1_POR_PERFIL = {
-  MG: { rangos: [{ inicio: 8 * 60 + 15, fin: 8 * 60 + 45 }, { inicio: 16 * 60 + 15, fin: 16 * 60 + 45 }],
-        etiquetas: ["08:15 a.m.", "04:15 p.m."] },
-  LN: { rangos: [{ inicio: 11 * 60, fin: 11 * 60 + 30 }, { inicio: 19 * 60, fin: 19 * 60 + 30 }],
-        etiquetas: ["11:00 a.m.", "07:00 p.m."] }
-};
-function aplicarPerfilHorarios(perfil) {
-  const conf = REPORTE1_POR_PERFIL[perfil] || REPORTE1_POR_PERFIL.MG;
-  horarios.btnCHECK1 = conf.rangos;
-  ETIQUETAS_REPORTES.diurno[0] = conf.etiquetas[0];
-  ETIQUETAS_REPORTES.nocturno[0] = conf.etiquetas[1];
-  if (typeof actualizarBotonesCheck === "function") actualizarBotonesCheck();
-}
 
 // 🗝️ Hasta cuándo puede el usuario usar Entregar Llave:
 // - MG: fin de SU turno (Diurno/Nocturno) + 15 minutos de gracia.
@@ -4194,13 +4185,16 @@ function actualizarBotonesCheck() {
     // nunca se cumplía: STAT quedaba bloqueado todo el turno nocturno.
     // Ahora se prueba la hora actual tal cual y también +24h (después de la
     // medianoche), así funciona con cualquier rango.
+    // Ventana [inicio, fin) con precisión de segundos: un Reporte dura
+    // exactamente 30:00 y el Informe 5:00 (antes el minuto final contaba
+    // completo y algunos duraban 1 minuto de más).
     const segundosAhora = totalMin * 60 + ahora.getSeconds();
     for (let rango of horarios[id]) {
       for (const desfase of [0, 1440]) {
-        const minutosEval = totalMin + desfase;
-        if (minutosEval >= rango.inicio && minutosEval <= rango.fin) {
+        const segundosEval = segundosAhora + desfase * 60;
+        if (segundosEval >= rango.inicio * 60 && segundosEval < rango.fin * 60) {
           enHorario = true;
-          const restante = Math.max(rango.fin * 60 - (segundosAhora + desfase * 60) - 1, 0);
+          const restante = Math.max(rango.fin * 60 - segundosEval, 0);
           tooltipMsg = `Finaliza en ${Math.floor(restante / 60)}m ${restante % 60}s`;
           segundosRestantesActivo = restante;
           break;
@@ -4269,7 +4263,7 @@ if (!enHorario) {
       const esDiurnoBtn = totalMin >= 8 * 60 && totalMin < 16 * 60;
       const rangoTurno = horarios[id][esDiurnoBtn ? 0 : 1];
       const minutosEnTurno = (!esDiurnoBtn && totalMin < 8 * 60) ? totalMin + 1440 : totalMin;
-      const yaPaso = !enHorario && rangoTurno && minutosEnTurno > rangoTurno.fin;
+      const yaPaso = !enHorario && rangoTurno && minutosEnTurno >= rangoTurno.fin;
       const finalizado = yaCompletado || yaPaso;
       btn.classList.toggle("btn-check-finalizado", finalizado);
       btn.style.background = (finalizado || enHorario || typeof colorFranjaHoraria !== "function") ? "" : colorFranjaHoraria();
@@ -4849,16 +4843,12 @@ document.addEventListener("DOMContentLoaded", function () {
   
   // ☀️🌙 Icono según el turno
   function obtenerIconoTurno() {
-    const hora = new Date().getHours();
-    return (hora >= 5 && hora < 18) ? "️🌤️" : "🌒";
+    return franjaHoraria() === "noche" ? "🌒" : "️🌤️";
   }
 
 // 👋 Saludo según la hora
   function obtenerSaludo() {
-    const hora = new Date().getHours();
-    if (hora >= 5 && hora < 12)  return "Buenos días";
-    if (hora >= 12 && hora < 18) return "Buenas tardes";
-                                 return "Buenas noches";
+    return { dia: "Buenos días", tarde: "Buenas tardes", noche: "Buenas noches" }[franjaHoraria()];
   }
 
 
@@ -4879,13 +4869,11 @@ document.addEventListener("DOMContentLoaded", function () {
   
   // 🔄 Actualizar turno
  // 🎨 Color según franja horaria (día/tarde/noche) — usado en el badge de
- // turno, la fecha/hora y la línea de viento/lluvia del nuevo banner.
- // Límites asumidos: Día 06:00–12:59, Tarde 13:00–18:59, Noche 19:00–05:59.
+ // turno, la fecha/hora y los botones de Reporte. Usa EXACTAMENTE los
+ // mismos límites que el saludo (ver franjaHoraria): así el color cambia
+ // en el mismo segundo que "Buenos días" / "Buenas tardes" / "Buenas noches".
  function colorFranjaHoraria() {
-   const hora = new Date().getHours();
-   if (hora >= 6 && hora < 13) return "#87CEEB";  // día
-   if (hora >= 13 && hora < 19) return "#FF8A65"; // tarde
-   return "#1A237E"; // noche
+   return { dia: "#87CEEB", tarde: "#FF8A65", noche: "#1A237E" }[franjaHoraria()];
  }
  // Expuesta para que los botones de Reporte usen el mismo color.
  window.colorFranjaHoraria = colorFranjaHoraria;
@@ -4922,7 +4910,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const colorFranja = colorFranjaHoraria();
   if (badge) badge.style.background = colorFranja;
-  if (jornadaBox) jornadaBox.style.background = colorFranja;
+  if (jornadaBox) {
+    jornadaBox.style.background = colorFranja;
+    // Número de jornada: negro en día/tarde, blanco en la noche (fondo azul).
+    jornadaBox.style.color = franjaHoraria() === "noche" ? "#ffffff" : "#000000";
+  }
   const fechaHoraEl = document.getElementById("fechaHoraActual");
   if (fechaHoraEl) fechaHoraEl.style.background = colorFranja;
 
@@ -5101,9 +5093,6 @@ function verificarCredenciales() {
 
   // Guardar estado de sesión
   localStorage.setItem("sesionActiva", "true");
-
-  // 👥 Horarios de los Reportes según el perfil del usuario (MG / LN).
-  aplicarPerfilHorarios(perfilDeUsuario(usuario));
 
   // 🗝️ Recordar hasta cuándo puede ESTE USUARIO entregar la llave (según
   // su propio turno, no el reloj general del sitio). Ver
