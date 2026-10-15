@@ -2308,6 +2308,7 @@ canvas[id^="firma"] {
 .rpt-f .l{font-size:10px;font-weight:800;color:#8A6100;letter-spacing:.6px;display:block;margin-bottom:2px}
 .rpt .rpt-f input{width:100%;border:none;padding:2px 0;font-size:13px;font-family:inherit;margin:0;background:transparent;color:var(--tx)}
 .rpt .rpt-f input:focus{outline:none}
+.rpt-arr-pen{background:#E6F4F5 !important;color:#007A83 !important}
 .rpt-arr{background:#FFF3D6;color:#7A5300;font-size:11px;font-weight:800;padding:2px 8px;border-radius:8px;margin-left:8px;white-space:nowrap}
 .rpt-colapsado{font-size:12.5px;color:var(--ok);font-weight:700;padding:9px 14px;border-top:1px solid #EEF1F3;cursor:pointer}
 .rpt-colapsado:hover{background:#F4FBF6}
@@ -2315,7 +2316,7 @@ canvas[id^="firma"] {
 .rpt-tab{display:grid;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid #EEF1F3;font-size:13px}
 .rpt-tab.cab{font-size:11px;letter-spacing:.8px;color:var(--g);text-transform:uppercase;font-weight:800;border-bottom:2px solid var(--tl)}
 .rpt-com{grid-template-columns:110px 1.2fr 140px 1.6fr 120px 28px}
-.rpt-pen{grid-template-columns:1fr 220px 150px 150px 28px}
+.rpt-pen{grid-template-columns:1.2fr 1.6fr 200px 140px}
 .rpt .rpt-tab input.rpt-in,.rpt .rpt-tab select.rpt-in{padding:6px 8px;font-size:13px;border-radius:8px}
 .rpt-org{font-size:11px;font-weight:800;color:var(--t2);background:var(--tl);padding:2px 8px;border-radius:8px}
 /* Comparación */
@@ -3282,8 +3283,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   ];
   const IMPACTOS = [["bajo", "Bajo"], ["medio", "Medio"], ["alto", "Alto"], ["na", "—"]];
   const ESTADOS_EV = [["abierto", "Abierto"], ["proceso", "En proceso"], ["observacion", "En observación"], ["resuelto", "Resuelto"], ["registrado", "Registrado"]];
-  const ESTADOS_PEN = [["abierto", "Abierto"], ["proceso", "En proceso"], ["resuelto", "Resuelto"]];
-  const MEDIOS = ["Teléfono", "WhatsApp", "Correo", "Radio", "Presencial", "Otro"];
+  const MEDIOS = ["Teléfono", "WhatsApp", "Correo", "Presencial"];
 
   let rpt = null; // reporte en edición
 
@@ -3351,8 +3351,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       mediciones: {},
       controles: {},
       comunicaciones: [],
-      pendientesEdit: {},   // { idPendiente: estado }
-      pendientesNuevos: [], // [{ id, texto }]
       recomendaciones: ""
     };
   }
@@ -3412,10 +3410,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     cuerpo.innerHTML = `
       <div id="rptPeriodo"></div>
       <div class="rpt-sec" id="rptSecEstado"></div>
+      <div class="rpt-sec" id="rptSecComunicaciones"></div>
       <div class="rpt-sec" id="rptSecBitacora"></div>
       <div class="rpt-sec" id="rptSecMediciones"></div>
       <div class="rpt-sec" id="rptSecControles"></div>
-      <div class="rpt-sec" id="rptSecComunicaciones"></div>
       <div class="rpt-sec" id="rptSecPendientes"></div>
       <div class="rpt-sec" id="rptSecComparacion"></div>
       <div class="rpt-sec" id="rptSecRecomendaciones"></div>`;
@@ -3480,7 +3478,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         <span></span></div>`;
     }).join("");
     document.getElementById("rptSecBitacora").innerHTML = `
-      ${titulo(2, "Bitácora del período", `<span class="hint">Prellenada con lo registrado en SiCheck · marca lo que entra al reporte</span>`)}
+      ${titulo(3, "Bitácora del período", `<span class="hint">Prellenada con lo registrado en SiCheck · marca lo que entra al reporte</span>`)}
       <div class="rpt-ev cab"><span></span><span>HORA</span><span>EVENTO</span><span>IMPACTO</span><span>ESTADO</span><span></span></div>
       ${filas || `<div class="rpt-vacio">No hay novedades, comentarios ni llaves registrados en este período.</div>`}
       <button type="button" class="rpt-add" onclick="RPT.agregarEvento()">＋ Agregar evento no registrado</button>`;
@@ -3524,7 +3522,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       </div>`;
     }).join("");
     document.getElementById("rptSecMediciones").innerHTML = `
-      ${titulo(3, "Mediciones", `<span class="hint">Valor actual vs. reporte anterior</span>`)}
+      ${titulo(4, "Mediciones", `<span class="hint">Valor actual vs. reporte anterior</span>`)}
       <div class="rpt-med">${tarjetas}</div>`;
   }
 
@@ -3546,24 +3544,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
           const c = rpt.controles[id] || {};
           const arrastre = antCtrl[id] && antCtrl[id].valor && antCtrl[id].valor !== "cumple";
           const btn = (v, cls, t) => `<button type="button" class="${cls} ${c.valor === v ? "on" : ""}" onclick="RPT.control('${id}', '${v}')">${t}</button>`;
-          let fila = `<div class="rpt-row"><span class="id">${id}</span>
-            <span>${esc(nombre)}${arrastre ? `<span class="rpt-arr">⚠️ pendiente del reporte anterior</span>` : ""}</span>
+          const enPendientes = c.valor === "parcial" || c.valor === "nocumple";
+          return `<div class="rpt-row"><span class="id">${id}</span>
+            <span>${esc(nombre)}${arrastre ? `<span class="rpt-arr">⚠️ pendiente del reporte anterior</span>` : ""}${enPendientes ? `<span class="rpt-arr rpt-arr-pen">📌 ver Pendientes (sección 6)</span>` : ""}</span>
             <div class="rpt-tri">${btn("cumple", "c", "Cumple")}${btn("parcial", "p", "Parcial")}${btn("nocumple", "n", "No cumple")}</div></div>`;
-          if (c.valor === "parcial" || c.valor === "nocumple") {
-            fila += `<div class="rpt-dev">
-              <div class="rpt-f"><span class="l">DESDE CUÁNDO</span><input type="time" value="${esc(c.desde || "")}" onchange="RPT.desvio('${id}', 'desde', this.value)"></div>
-              <div class="rpt-f"><span class="l">ACCIÓN TOMADA *</span><input type="text" placeholder="¿Qué se hizo?" value="${esc(c.accion || "")}" oninput="RPT.desvio('${id}', 'accion', this.value)"></div>
-              <div class="rpt-f"><span class="l">ESCALADO A</span><input type="text" placeholder="Persona o área" value="${esc(c.escalado || "")}" oninput="RPT.desvio('${id}', 'escalado', this.value)"></div>
-            </div>`;
-          }
-          return fila;
         }).join("");
       }
       return `<div class="rpt-grp"><div class="rpt-grp-h">${sec.icono} ${sec.nombre}
           <div class="st"><span class="rpt-cnt">${resumen}</span><button type="button" class="rpt-btn-ok ${todoOk ? "" : "ghost"}" onclick="RPT.todoEnOrden('${sec.id}')">✓ Todo en orden</button></div></div>${cuerpo}</div>`;
     }).join("");
     document.getElementById("rptSecControles").innerHTML = `
-      ${titulo(4, "Controles", `<span class="hint">"Todo en orden" marca la sección completa · solo lo anormal pide detalle</span>`)}${grupos}`;
+      ${titulo(5, "Controles", `<span class="hint">"Todo en orden" marca la sección completa · solo lo anormal pide detalle</span>`)}${grupos}`;
   }
 
   function renderComunicaciones() {
@@ -3577,42 +3568,49 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         <button type="button" class="rpt-x" title="Quitar" onclick="RPT.quitarCom(${i})">✕</button>
       </div>`).join("");
     document.getElementById("rptSecComunicaciones").innerHTML = `
-      ${titulo(5, "Comunicaciones y escalamientos")}
+      ${titulo(2, "Comunicaciones y escalamientos")}
       ${rpt.comunicaciones.length ? `<div class="rpt-tab rpt-com cab"><span>Hora</span><span>Notificado a</span><span>Medio</span><span>Motivo</span><span>Ticket</span><span></span></div>${filas}`
         : `<div class="rpt-vacio">No se registraron comunicaciones en este período.</div>`}
       <button type="button" class="rpt-add" onclick="RPT.agregarCom()">＋ Agregar comunicación</button>`;
   }
 
-  function renderPendientes() {
-    const desde = new Date(rpt.periodoDesde);
-    const lista = pendientesDelGrupo().filter(p => p.estado !== "resuelto" || rpt.pendientesEdit[p.id] || new Date(p.actualizadoEn || 0) >= desde);
-    const filas = lista.map(p => {
-      const est = rpt.pendientesEdit[p.id] || p.estado;
-      return `<div class="rpt-tab rpt-pen"><span>${esc(p.texto)}</span><span><span class="rpt-org">${esc(p.origen)}</span></span>
-        <span>${fechaCorta(p.desde)}</span>
-        <select class="rpt-pill p-${est}" onchange="RPT.pendiente('${p.id}', this.value); this.className='rpt-pill p-'+this.value">${opciones(ESTADOS_PEN, est)}</select><span></span></div>`;
-    }).join("");
-    const nuevos = rpt.pendientesNuevos.map((p, i) => `
-      <div class="rpt-tab rpt-pen"><input class="rpt-in" type="text" placeholder="Describe el pendiente" value="${esc(p.texto)}" oninput="RPT.pendienteNuevo(${i}, this.value)">
-        <span><span class="rpt-org">Este reporte</span></span><span>${fechaCorta(rpt.abiertoEn)}</span>
-        <span class="rpt-pill p-abierto" style="display:block;text-align:center;padding:5px 8px;border-radius:20px;font-size:12px;font-weight:800">Abierto</span>
-        <button type="button" class="rpt-x" onclick="RPT.quitarPendienteNuevo(${i})">✕</button></div>`).join("");
-    const autos = controlesConDesvio().filter(c => !pendienteDeControl(c.id)).map(c => `
-      <div class="rpt-tab rpt-pen"><span>${esc(c.id)} ${esc(c.nombre)}${c.accion ? ` — ${esc(c.accion)}` : ""}</span>
-        <span><span class="rpt-org">Este reporte (control)</span></span><span>${fechaCorta(rpt.abiertoEn)}</span>
-        <span class="rpt-pill p-abierto" style="display:block;text-align:center;padding:5px 8px;border-radius:20px;font-size:12px;font-weight:800">Abierto</span><span></span></div>`).join("");
-    const hay = filas || nuevos || autos;
-    document.getElementById("rptSecPendientes").innerHTML = `
-      ${titulo(6, "Pendientes y seguimiento", `<span class="hint">🗝️ Viajan en la llave de turno</span>`)}
-      ${hay ? `<div class="rpt-tab rpt-pen cab"><span>Pendiente</span><span>Origen</span><span>Desde</span><span>Estado</span><span></span></div>${filas}${autos}${nuevos}`
-        : `<div class="rpt-vacio">No hay pendientes abiertos.</div>`}
-      <button type="button" class="rpt-add" onclick="RPT.agregarPendiente()">＋ Agregar pendiente</button>`;
+  // Pendientes = controles en Parcial / No cumple. Cada uno se crea al
+  // presionar esos botones; el que viene de reportes anteriores sigue aquí
+  // hasta que su control vuelva a "Cumple" (entonces se resuelve solo).
+  function pendientesActuales() {
+    const filas = [];
+    TODOS_CONTROLES.forEach(c => {
+      const ctrl = rpt.controles[c.id] || {};
+      const previo = pendienteDeControl(c.id);
+      const desvio = ctrl.valor === "parcial" || ctrl.valor === "nocumple";
+      if (desvio) {
+        filas.push({ id: c.id, nombre: c.nombre, valor: ctrl.valor, editable: true,
+          motivo: ctrl.motivo != null ? ctrl.motivo : (previo ? (previo.motivo || "") : ""),
+          origen: previo ? previo.origen : "Este reporte", desde: previo ? previo.desde : (ctrl.marcadoEn || rpt.abiertoEn) });
+      } else if (!ctrl.valor && previo) {
+        filas.push({ id: c.id, nombre: c.nombre, valor: null, editable: false,
+          motivo: previo.motivo || "", origen: previo.origen, desde: previo.desde });
+      }
+    });
+    return filas;
   }
 
-  function controlesConDesvio() {
-    return TODOS_CONTROLES.filter(c => ["parcial", "nocumple"].includes(rpt.controles[c.id]?.valor))
-      .map(c => ({ ...c, accion: rpt.controles[c.id].accion || "" }));
+  function renderPendientes() {
+    const filas = pendientesActuales().map(f => `
+      <div class="rpt-tab rpt-pen">
+        <span><b>${esc(f.id)}</b> ${esc(f.nombre)}${f.valor ? ` <span class="rpt-arr" style="margin-left:4px">${ETIQUETA[f.valor]}</span>` : ""}</span>
+        ${f.editable
+          ? `<input class="rpt-in" type="text" placeholder="¿Por qué? ¿Qué se hizo? (obligatorio)" value="${esc(f.motivo)}" oninput="RPT.motivo('${f.id}', this.value)">`
+          : `<span style="color:var(--g)">${esc(f.motivo) || "—"}<small style="display:block;font-size:11px">Evalúa el control ${esc(f.id)} en la sección 5</small></span>`}
+        <span><span class="rpt-org">${esc(f.origen)}</span></span>
+        <span>${fechaCorta(f.desde)}</span>
+      </div>`).join("");
+    document.getElementById("rptSecPendientes").innerHTML = `
+      ${titulo(6, "Pendientes y seguimiento", `<span class="hint">🗝️ Viajan en la llave de turno · se crean al marcar Parcial o No cumple</span>`)}
+      ${filas ? `<div class="rpt-tab rpt-pen cab"><span>Pendiente</span><span>Motivo</span><span>Origen</span><span>Desde</span></div>${filas}`
+        : `<div class="rpt-vacio">No hay pendientes abiertos.</div>`}`;
   }
+
   function pendienteDeControl(idControl) {
     return pendientesDelGrupo().find(p => p.clave === "ctrl:" + idControl && p.estado !== "resuelto");
   }
@@ -3624,15 +3622,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       const a = antCtrl[id]?.valor, h = rpt.controles[id]?.valor;
       if (a && h && RANGO[h] < RANGO[a]) empeoro++;
     });
-    const pend = pendientesDelGrupo();
-    let resueltos = 0, abiertos = 0;
-    pend.forEach(p => {
-      let est = rpt.pendientesEdit[p.id] || p.estado;
-      if (p.clave && p.clave.startsWith("ctrl:") && rpt.controles[p.clave.slice(5)]?.valor === "cumple") est = "resuelto";
-      if (est === "resuelto" && p.estado !== "resuelto") resueltos++;
-      if (est !== "resuelto") abiertos++;
-    });
-    abiertos += rpt.pendientesNuevos.filter(p => p.texto.trim()).length + controlesConDesvio().filter(c => !pendienteDeControl(c.id)).length;
+    const resueltos = TODOS_CONTROLES.filter(c => rpt.controles[c.id]?.valor === "cumple" && pendienteDeControl(c.id)).length;
+    const abiertos = pendientesActuales().length;
     const eventos = rpt.bitacora.filter(e => e.incluir && (e.tipo !== "AGREGADO" || e.texto.trim())).length;
     return { empeoro, resueltos, abiertos, eventos };
   }
@@ -3684,10 +3675,18 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       if (bar) { bar.style.width = inf.ancho + "%"; bar.style.background = inf.color; }
     },
     control(id, v) {
-      rpt.controles[id] = { ...(rpt.controles[id] || {}), valor: v };
+      const previo = rpt.controles[id] || {};
+      const nuevo = { ...previo, valor: v };
+      // Al pasar a Parcial / No cumple se registra en Pendientes (sección 6).
+      if ((v === "parcial" || v === "nocumple") && previo.valor !== "parcial" && previo.valor !== "nocumple") {
+        nuevo.marcadoEn = new Date().toISOString();
+        const pend = pendienteDeControl(id);
+        if (nuevo.motivo == null && pend) nuevo.motivo = pend.motivo || "";
+      }
+      rpt.controles[id] = nuevo;
       guardarBorrador(); renderControles(); renderPendientes(); renderComparacion();
     },
-    desvio(id, k, v) { rpt.controles[id] = { ...(rpt.controles[id] || {}), [k]: v }; guardarBorrador(); },
+    motivo(id, v) { rpt.controles[id] = { ...(rpt.controles[id] || {}), motivo: v }; guardarBorrador(); },
     todoEnOrden(idSec) {
       const sec = SECCIONES.find(s => s.id === idSec);
       sec.controles.forEach(([id]) => { rpt.controles[id] = { valor: "cumple" }; });
@@ -3702,10 +3701,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       guardarBorrador(); renderComunicaciones();
     },
     quitarCom(i) { rpt.comunicaciones.splice(i, 1); guardarBorrador(); renderComunicaciones(); },
-    pendiente(id, v) { rpt.pendientesEdit[id] = v; guardarBorrador(); renderComparacion(); },
-    agregarPendiente() { rpt.pendientesNuevos.push({ id: nuevoId("pen"), texto: "" }); guardarBorrador(); renderPendientes(); },
-    pendienteNuevo(i, v) { rpt.pendientesNuevos[i].texto = v; guardarBorrador(); renderComparacion(); },
-    quitarPendienteNuevo(i) { rpt.pendientesNuevos.splice(i, 1); guardarBorrador(); renderPendientes(); renderComparacion(); }
   };
 
   /* ---------- validar y guardar ---------- */
@@ -3733,11 +3728,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       for (const [id, nombre] of sec.controles) {
         const c = rpt.controles[id];
         if (!c || !c.valor) { RPT.expandir(sec.id); return fallo("rptSecControles", `Falta evaluar el control ${id} "${nombre}" (${sec.nombre}).`); }
-        if (c.valor !== "cumple" && !(c.accion || "").trim()) return fallo("rptSecControles", `Indica la acción tomada en el control ${id} "${nombre}".`);
+        if (c.valor !== "cumple" && !(c.motivo || "").trim()) return fallo("rptSecPendientes", `Escribe el motivo del pendiente ${id} "${nombre}".`);
       }
     }
     if (rpt.comunicaciones.some(c => !c.a.trim() || !c.motivo.trim())) return fallo("rptSecComunicaciones", "Completa a quién se notificó y el motivo, o quita la comunicación vacía.");
-    if (rpt.pendientesNuevos.some(p => !p.texto.trim())) return fallo("rptSecPendientes", "Describe el pendiente agregado o quítalo.");
     return true;
   }
 
@@ -3746,28 +3740,21 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const ahoraIso = new Date().toISOString();
     const origen = `Reporte ${rpt.numero} · ${rpt.usuario}`;
 
-    // 1) Pendientes: cambios de estado, nuevos y los de controles con desvío.
+    // 1) Pendientes: los de controles en Parcial / No cumple (con su motivo);
+    //    los que vuelven a "Cumple" quedan resueltos.
     const pendientes = leer(LS_PENDIENTES, []);
-    Object.entries(rpt.pendientesEdit).forEach(([id, est]) => {
-      const p = pendientes.find(x => x.id === id);
-      if (p && p.estado !== est) { p.estado = est; p.actualizadoEn = ahoraIso; if (est === "resuelto") p.resueltoPor = rpt.usuario; }
-    });
     TODOS_CONTROLES.forEach(c => {
       const ctrl = rpt.controles[c.id];
       const p = pendientes.find(x => x.clave === "ctrl:" + c.id && x.estado !== "resuelto" && enGrupo(x));
       if (ctrl.valor === "cumple" && p) { p.estado = "resuelto"; p.actualizadoEn = ahoraIso; p.resueltoPor = rpt.usuario; }
       if (ctrl.valor !== "cumple") {
-        const texto = `${c.id} ${c.nombre} — ${ctrl.accion}`;
-        if (p) { p.texto = texto; p.actualizadoEn = ahoraIso; }
-        else {
-          const hoy = new Date(); if (ctrl.desde) { const [h, m] = ctrl.desde.split(":"); hoy.setHours(+h, +m, 0, 0); }
-          pendientes.push({ id: nuevoId("pen"), clave: "ctrl:" + c.id, texto, origen, desde: (ctrl.desde ? hoy : new Date()).toISOString(),
-            estado: "abierto", grupo: rpt.grupo, creadoPor: rpt.usuario, actualizadoEn: ahoraIso });
-        }
+        const texto = `${c.id} ${c.nombre}`;
+        const motivo = (ctrl.motivo || "").trim();
+        if (p) { p.texto = texto; p.motivo = motivo; p.actualizadoEn = ahoraIso; }
+        else pendientes.push({ id: nuevoId("pen"), clave: "ctrl:" + c.id, texto, motivo, origen,
+          desde: ctrl.marcadoEn || rpt.abiertoEn, estado: "abierto", grupo: rpt.grupo, creadoPor: rpt.usuario, actualizadoEn: ahoraIso });
       }
     });
-    rpt.pendientesNuevos.forEach(p => pendientes.push({ id: p.id, texto: p.texto.trim(), origen, desde: rpt.abiertoEn,
-      estado: "abierto", grupo: rpt.grupo, creadoPor: rpt.usuario, actualizadoEn: ahoraIso }));
     escribir(LS_PENDIENTES, pendientes);
 
     // 2) Reporte final.
@@ -3792,7 +3779,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     TODOS_CONTROLES.forEach(c => {
       const v = rpt.controles[c.id].valor;
       resultados[c.nombre] = { valor: v === "cumple" ? 100 : v === "parcial" ? 50 : 0, etiqueta: ETIQUETA[v] };
-      if (v !== "cumple") observaciones.push({ control: c.nombre, texto: rpt.controles[c.id].accion });
+      if (v !== "cumple") observaciones.push({ control: c.nombre, texto: rpt.controles[c.id].motivo });
     });
     bitacora.push({ id: nuevoId("chk"), usuario: rpt.usuario, numeroReporte: rpt.numero,
       fechaHoraApertura: rpt.abiertoEn, fechaHoraEnvio: ahoraIso, resultados, observaciones });
