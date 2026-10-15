@@ -2260,6 +2260,7 @@ canvas[id^="firma"] {
 .rpt-lbl{font-size:11px;font-weight:800;color:var(--g);letter-spacing:1px;margin:12px 0 4px;display:block}
 .rpt textarea.rpt-ta,.rpt input.rpt-in,.rpt select.rpt-in{width:100%;border:1.5px solid var(--b);border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;color:var(--tx);background:#FCFDFD;margin:0}
 .rpt textarea.rpt-ta{min-height:70px;resize:vertical;line-height:1.5}
+.rpt textarea.rpt-ta:disabled{background:#EEF1F3;color:#1E6B3E;font-weight:800;letter-spacing:.5px;cursor:not-allowed}
 .rpt .rpt-in:focus,.rpt .rpt-ta:focus{outline:none;border-color:var(--t);box-shadow:0 0 0 3px rgba(0,148,159,.15)}
 /* Bitácora */
 .rpt-ev{display:grid;grid-template-columns:26px 70px 1fr 130px 140px 28px;gap:12px;align-items:center;padding:10px 6px;border-bottom:1px solid #EEF1F3}
@@ -3245,6 +3246,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   const LS_EN_CURSO   = "rptEnCursoTI";     // personal: no viaja en la llave
   const LS_BORRADOR   = "rptBorradorTI";    // personal: no viaja en la llave
   const HORAS_MAX_EN_CURSO = 12;
+  const RESUMEN_SIN_NOVEDAD = "SIN NOVEDADES QUE REPORTAR";
 
   const SECCIONES = [
     { id: "acceso",    icono: "🔐", nombre: "Control de Acceso", controles: [
@@ -3253,16 +3255,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       ["2.5", "Cámaras de Vigilancia Operando"] ] },
     { id: "ambiente",  icono: "🌡️", nombre: "Control de Ambiente", controles: [
       ["3.1", "El Clima no presenta ninguna Amenaza"],
-      ["3.2", "Climatización entre 18°C a 27°C"],
       ["3.3", "Sistema Contra Incendio Activado"],
       ["3.4", "Sin Humedad en Áreas Críticas"],
       ["3.5", "Control de Plagas Eficiente"] ] },
     { id: "electrica", icono: "⚡", nombre: "Infraestructura Eléctrica", controles: [
       ["4.1", "El Edificio no ha presentado Cortes de Energía"],
       ["4.2", "Banco de Baterías UPS sin Alertas"],
-      ["4.3", "Generador Eléctrico en Buen Estado"],
-      ["4.4", "Combustible Principal Suficiente"],
-      ["4.5", "Combustible Reserva Suficiente"] ] },
+      ["4.3", "Generador Eléctrico en Buen Estado"] ] },
     { id: "equipos",   icono: "🖥️", nombre: "Equipamiento Tecnológico", controles: [
       ["5.1", "Servidores sin Alertas"],
       ["5.2", "Switches y Routers Conectados"],
@@ -3279,7 +3278,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     { id: "clima",         icono: "🌡️", nombre: "Climatización",         unidad: "°C" },
     { id: "combPrincipal", icono: "⛽", nombre: "Combustible principal", unidad: "%" },
     { id: "combReserva",   icono: "⛽", nombre: "Combustible reserva",   unidad: "%" },
-    { id: "autonomiaUps",  icono: "🔋", nombre: "Autonomía UPS",         unidad: "min" }
+    { id: "autonomiaUpsHoras", icono: "🔋", nombre: "Autonomía UPS",     unidad: "h" }
   ];
   const IMPACTOS = [["bajo", "Bajo"], ["medio", "Medio"], ["alto", "Alto"], ["na", "—"]];
   const ESTADOS_EV = [["abierto", "Abierto"], ["proceso", "En proceso"], ["observacion", "En observación"], ["resuelto", "Resuelto"], ["registrado", "Registrado"]];
@@ -3456,7 +3455,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       ${titulo(1, "Estado general del período", `<span class="hint">Un clic · el resumen es obligatorio si no es 🟢</span>`)}
       <div class="rpt-sem">${b("verde", "var(--ok)", "Sin novedad")}${b("amarillo", "var(--warn)", "Con incidencias menores")}${b("rojo", "var(--bad)", "Con incidencias críticas")}</div>
       <label class="rpt-lbl">RESUMEN DEL PERÍODO</label>
-      <textarea class="rpt-ta" placeholder="Describe en 2–3 líneas lo más relevante del período..." oninput="RPT.campo('resumen', this.value)">${esc(rpt.resumen)}</textarea>`;
+      <textarea class="rpt-ta" ${rpt.estado === "verde" ? "disabled" : ""} placeholder="${rpt.estado ? "Describe en 2–3 líneas lo más relevante del período (obligatorio)..." : "Primero elige el estado del período"}" oninput="RPT.campo('resumen', this.value)">${esc(rpt.resumen)}</textarea>`;
   }
 
   function renderBitacora() {
@@ -3494,14 +3493,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     let ancho = 0, color = "var(--ok)";
     if (!isNaN(v)) {
       if (id === "clima") { ancho = Math.min(100, Math.max(0, (v / 35) * 100)); color = (v >= 18 && v <= 27) ? "var(--ok)" : "var(--bad)"; if (v > 25 && v <= 27) color = "var(--warn)"; }
-      else if (id === "autonomiaUps") { ancho = Math.min(100, (v / 60) * 100); color = v >= 30 ? "var(--ok)" : v >= 15 ? "var(--warn)" : "var(--bad)"; }
+      else if (id === "autonomiaUpsHoras") { ancho = Math.min(100, (v / 2) * 100); color = v >= 0.5 ? "var(--ok)" : v >= 0.25 ? "var(--warn)" : "var(--bad)"; }
       else { ancho = Math.min(100, Math.max(0, v)); color = v >= 50 ? "var(--ok)" : v >= 25 ? "var(--warn)" : "var(--bad)"; }
     }
     let tr = { cls: "na", txt: !rpt.anterior ? "Primer registro del turno"
       : isNaN(ant) ? "Sin dato en el reporte anterior"
       : `Anterior: ${ant} ${def.unidad} (${hhmm(rpt.anterior.enviadoEn)})` };
     if (!isNaN(v) && !isNaN(ant)) {
-      const d = Math.round((v - ant) * 10) / 10;
+      const d = Math.round((v - ant) * 100) / 100;
       const ref = `${ant} ${def.unidad} (${hhmm(rpt.anterior.enviadoEn)})`;
       if (d === 0) tr = { cls: "eq", txt: `= sin cambio vs. ${ref}` };
       else {
@@ -3659,7 +3658,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
   /* ---------- acciones (desde el HTML) ---------- */
   window.RPT = {
-    estado(v) { rpt.estado = v; guardarBorrador(); renderEstado(); },
+    estado(v) {
+      // "Sin novedad" llena el resumen automáticamente (campo deshabilitado);
+      // con incidencias el resumen se debe escribir.
+      if (v === "verde") rpt.resumen = RESUMEN_SIN_NOVEDAD;
+      else if (rpt.resumen === RESUMEN_SIN_NOVEDAD) rpt.resumen = "";
+      rpt.estado = v; guardarBorrador(); renderEstado();
+      if (v !== "verde") document.querySelector("#rptSecEstado textarea")?.focus();
+    },
     campo(k, v) { rpt[k] = v; guardarBorrador(); },
     evento(i, k, v) { rpt.bitacora[i][k] = v; guardarBorrador(); renderComparacion(); },
     agregarEvento() {
@@ -3716,7 +3722,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
   function validar() {
     if (!rpt.estado) return fallo("rptSecEstado", "Selecciona el estado general del período.");
-    if (rpt.estado !== "verde" && !rpt.resumen.trim()) return fallo("rptSecEstado", "Escribe el resumen del período (obligatorio si hubo incidencias).");
+    if (rpt.estado !== "verde" && (!rpt.resumen.trim() || rpt.resumen.trim() === RESUMEN_SIN_NOVEDAD))
+      return fallo("rptSecEstado", "Escribe el resumen del período: es obligatorio cuando hay incidencias.");
     if (rpt.bitacora.some(e => e.tipo === "AGREGADO" && !e.texto.trim())) return fallo("rptSecBitacora", "Describe el evento agregado o quítalo de la bitácora.");
     for (const m of MEDICIONES) {
       if (rpt.mediciones[m.id] === undefined || rpt.mediciones[m.id] === "" || isNaN(parseFloat(rpt.mediciones[m.id])))
