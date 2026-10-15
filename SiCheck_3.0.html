@@ -390,13 +390,19 @@ input[type="checkbox"]:checked::after {
   inset: 0;
   background: rgba(10, 15, 25, 0.62);
   z-index: 50;
-  pointer-events: none;   /* solo oscurece: la página sigue usable */
+  pointer-events: auto;   /* bloquea clics en todo lo que cubre */
 }
 #capaFocoBoton.visible {
   display: block;
   animation: aparecerFoco 0.4s ease;
 }
 @keyframes aparecerFoco { from { opacity: 0; } to { opacity: 1; } }
+/* Sin scroll mientras un botón está iluminado */
+html.modo-foco-boton,
+html.modo-foco-boton body,
+html.modo-foco-boton #VistaHome {
+  overflow: hidden !important;
+}
 /* El botón disponible queda por encima de la capa oscura */
 .btn-diagonal-wrap.btn-foco {
   z-index: 51;
@@ -2273,6 +2279,21 @@ const STORAGE_KEY_DASHBOARD = "soc_dashboard_data";
   // 🌤️ Franja del día — única fuente para el saludo, el ícono y los
   // colores del encabezado y los botones:
   // Día 05:00–11:59 · Tarde 12:00–17:59 · Noche 18:00–04:59.
+  // 🔒 Mientras un botón está iluminado (modo foco), se bloquea el teclado
+  // y la rueda del mouse en toda la página, salvo en el botón iluminado y
+  // en las ventanas de aviso (pausa activa, relevo, etc.).
+  (function () {
+    const permitido = el => el && el.closest && el.closest(".btn-diagonal-wrap.btn-foco, .modal-pausa, .modal-overlay");
+    const bloquear = e => {
+      if (!document.documentElement.classList.contains("modo-foco-boton")) return;
+      if (permitido(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    ["keydown", "keypress", "wheel", "touchmove"].forEach(tipo =>
+      document.addEventListener(tipo, bloquear, { capture: true, passive: false }));
+  })();
+
   function franjaHoraria() {
     const hora = new Date().getHours();
     if (hora >= 5 && hora < 12) return "dia";
@@ -2801,8 +2822,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 <!-- Barra de botones fija -->
 <div class="barra-fija" style="position: fixed; top: 0; left: 0; width: 100%; background: white; z-index: 999; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
 
-  <!-- Capa oscura de "foco": cubre toda la página mientras un botón está
-       disponible, dejando solo ese botón iluminado (no bloquea clics). -->
+  <!-- Capa oscura de "foco": cubre y BLOQUEA toda la página mientras un
+       botón está disponible; solo ese botón iluminado queda utilizable. -->
   <div id="capaFocoBoton" aria-hidden="true"></div>
 
   <div id="VistaHome" style="display:block;">
@@ -4380,7 +4401,18 @@ if (!enHorario) {
     const login = document.getElementById("loginView");
     const enHome = home && home.style.display !== "none" && getComputedStyle(home).display !== "none";
     const enLogin = login && getComputedStyle(login).display !== "none";
-    capaFoco.classList.toggle("visible", botonesEnFoco > 0 && enHome && !enLogin);
+    const activar = botonesEnFoco > 0 && enHome && !enLogin;
+    const yaEstaba = capaFoco.classList.contains("visible");
+    capaFoco.classList.toggle("visible", activar);
+    // 🔒 Bloqueo total: sin scroll (se sube al inicio para que el botón se
+    // vea) y sin foco en otros campos; ver también el bloqueo de teclado.
+    document.documentElement.classList.toggle("modo-foco-boton", activar);
+    if (activar && !yaEstaba) {
+      if (home) home.scrollTop = 0;
+      window.scrollTo(0, 0);
+      const activo = document.activeElement;
+      if (activo && activo !== document.body && !activo.closest(".btn-diagonal-wrap.btn-foco")) activo.blur();
+    }
   }
 
   // 🗝️ ENTREGAR LLAVE: ya no depende de una ventana horaria fija — se puede
@@ -5212,11 +5244,10 @@ function verificarCredenciales() {
   // calcularLimiteEntregaLlave() para las reglas de MG y LN.
   window.entregaLlaveLimiteMs = calcularLimiteEntregaLlave(usuario, new Date());
 
-  // ☕ Pausa activa: arranca justo ahora (no antes de iniciar sesión) y el
-  // conteo de 72 minutos empieza desde este momento, no desde un valor
-  // viejo que pudiera haber quedado guardado de una sesión anterior.
-  if (typeof STORAGE_PAUSA_KEY !== "undefined") {
-    localStorage.setItem(STORAGE_PAUSA_KEY, Date.now());
+  // ☕ Pausa activa POR USUARIO: si entra un analista distinto al anterior,
+  // su conteo de 30 minutos arranca desde este momento.
+  if (typeof prepararPausaActivaParaUsuario === "function") {
+    prepararPausaActivaParaUsuario(usuario);
   }
   if (typeof iniciarSistemaPausaActiva === "function") {
     iniciarSistemaPausaActiva();
@@ -5336,6 +5367,10 @@ function construirDatosLlaveTurno(forzada) {
     const key = localStorage.key(i);
     payload[key] = localStorage.getItem(key);
   }
+  // ☕ El conteo de pausa activa es personal: no viaja en la llave.
+  Object.keys(payload).forEach(k => {
+    if (k.startsWith("ultima_pausa_activa") || k.startsWith("pausa_")) delete payload[k];
+  });
   // 🔒 La llave solo lleva las novedades que quien la genera puede ver: un
   // analista de un grupo nunca exporta novedades del otro grupo.
   try {
@@ -5583,6 +5618,9 @@ function recibirLlaveDeTurno(inputFile) {
 
         Object.keys(payload).forEach(k => {
           if (k === CLAVE_NOVEDADES || k === CLAVE_ELIMINADAS || k === CLAVE_COMENTARIOS_ELIMINADOS) return; // se procesan aparte, en orden
+          // ☕ El conteo de pausa activa es personal de cada analista: nunca
+          // se toma de la llave de otro.
+          if (k.startsWith("ultima_pausa_activa") || k.startsWith("pausa_")) return;
           // El resto (checklists, dashboard, etc.) sí se reemplaza tal cual.
           localStorage.setItem(k, payload[k]);
         });
@@ -6614,9 +6652,27 @@ const audioPausa = document.getElementById("audioPausaActiva");
 /* CONFIGURACIÓN */
 /* ========================================= */
 
-const INTERVALO_PAUSA = 72 * 60 * 1000; // 72 minutos
-const STORAGE_PAUSA_KEY = "ultima_pausa_activa";
-const STORAGE_RESET_ALMUERZO = "pausa_reset_almuerzo_fecha"; // fecha (YYYY-MM-DD) del último reinicio de conteo tras el almuerzo
+const INTERVALO_PAUSA = 30 * 60 * 1000; // 30 minutos
+// 👤 El conteo es POR USUARIO: cada analista tiene su propia marca de
+// "última pausa", así el cambio de usuario no hereda el conteo del anterior.
+const STORAGE_PAUSA_KEY = "ultima_pausa_activa";            // prefijo (+ "__" + usuario)
+const STORAGE_PAUSA_USUARIO = "pausa_activa_ultimo_usuario"; // quién inició sesión por última vez
+const STORAGE_RESET_ALMUERZO = "pausa_reset_almuerzo_fecha"; // prefijo (+ "__" + usuario): fecha del último reinicio tras el almuerzo
+function clavePausaUsuario(base) {
+  return `${base}__${window.usuarioSeleccionado || "sin_usuario"}`;
+}
+
+// Al iniciar sesión: si entra un usuario DISTINTO al anterior, su conteo
+// de 30 minutos empieza desde cero. Si es el mismo usuario volviendo a
+// entrar al poco rato (p. ej. tras recargar), continúa donde iba.
+function prepararPausaActivaParaUsuario(usuario) {
+  const clave = `${STORAGE_PAUSA_KEY}__${usuario}`;
+  const anterior = localStorage.getItem(STORAGE_PAUSA_USUARIO);
+  const ultima = Number(localStorage.getItem(clave) || 0);
+  const continuaMismoUsuario = anterior === usuario && ultima && (Date.now() - ultima) < INTERVALO_PAUSA;
+  if (!continuaMismoUsuario) localStorage.setItem(clave, Date.now());
+  localStorage.setItem(STORAGE_PAUSA_USUARIO, usuario);
+}
 
 /* ========================================= */
 /* ABRIR MODAL */
@@ -6640,9 +6696,9 @@ function cerrarModalPausa(){
   audioPausa.pause();
   audioPausa.currentTime = 0;
 
-  /* Guardar hora de cierre */
+  /* Guardar hora de cierre (del usuario en sesión) */
   localStorage.setItem(
-    STORAGE_PAUSA_KEY,
+    clavePausaUsuario(STORAGE_PAUSA_KEY),
     Date.now()
   );
 
@@ -6686,7 +6742,7 @@ function horarioPermitido(){
 /* ========================================= */
 /* REINICIAR EL CONTEO AL VOLVER DEL ALMUERZO */
 /* ========================================= */
-// A partir de las 13:30, el conteo de 72 minutos debe arrancar de cero
+// A partir de las 13:30, el conteo de 30 minutos debe arrancar de cero
 // (no seguir donde iba antes del almuerzo). Se hace una sola vez por día.
 function manejarReinicioTrasAlmuerzo(){
 
@@ -6695,11 +6751,11 @@ function manejarReinicioTrasAlmuerzo(){
   if (minutosTotales < (13 * 60 + 30)) return;
 
   const hoyStr = ahora.toISOString().slice(0, 10);
-  const yaReiniciadoHoy = localStorage.getItem(STORAGE_RESET_ALMUERZO);
+  const yaReiniciadoHoy = localStorage.getItem(clavePausaUsuario(STORAGE_RESET_ALMUERZO));
   if (yaReiniciadoHoy === hoyStr) return;
 
-  localStorage.setItem(STORAGE_PAUSA_KEY, Date.now());
-  localStorage.setItem(STORAGE_RESET_ALMUERZO, hoyStr);
+  localStorage.setItem(clavePausaUsuario(STORAGE_PAUSA_KEY), Date.now());
+  localStorage.setItem(clavePausaUsuario(STORAGE_RESET_ALMUERZO), hoyStr);
 
 }
 
@@ -6709,7 +6765,7 @@ function manejarReinicioTrasAlmuerzo(){
 function debeMostrarPausa(){
 
   const ultimaPausa = localStorage.getItem(
-    STORAGE_PAUSA_KEY
+    clavePausaUsuario(STORAGE_PAUSA_KEY)
   );
 
   /* Nunca mostrada */
@@ -6729,6 +6785,7 @@ function debeMostrarPausa(){
 /* ========================================= */
 function verificarPausaActiva(){
 
+  if (!window.usuarioSeleccionado) return; // solo con sesión iniciada
   manejarReinicioTrasAlmuerzo();
 
   if(!horarioPermitido()){
