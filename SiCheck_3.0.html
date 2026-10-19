@@ -3256,24 +3256,24 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   const RESUMEN_SIN_NOVEDAD = "SIN NOVEDADES QUE REPORTAR";
 
   const SECCIONES = [
-    { id: "acceso",    icono: "🔐", nombre: "Control de Acceso", controles: [
+    { id: "acceso",    icono: "🔐", nombre: "Seguridad Física", controles: [
       ["2.2", "Todas las Puertas tienen Acceso Biométrico"],
       ["2.3", "El personal registra el Acceso"],
       ["2.5", "Cámaras de Vigilancia Operando"] ] },
-    { id: "ambiente",  icono: "🌡️", nombre: "Control de Ambiente", controles: [
+    { id: "ambiente",  icono: "🌡️", nombre: "Seguridad Ambiental", controles: [
       ["3.1", "El Clima no presenta ninguna Amenaza"],
       ["3.3", "Sistema Contra Incendio Activado"],
       ["3.4", "Sin Humedad en Áreas Críticas"],
       ["3.5", "Control de Plagas Eficiente"] ] },
-    { id: "electrica", icono: "⚡", nombre: "Infraestructura Eléctrica", controles: [
+    { id: "electrica", icono: "⚡", nombre: "Seguridad Energética", controles: [
       ["4.1", "El Edificio no ha presentado Cortes de Energía"],
       ["4.2", "Banco de Baterías UPS sin Alertas"],
       ["4.3", "Generador Eléctrico en Buen Estado"] ] },
-    { id: "equipos",   icono: "🖥️", nombre: "Equipamiento Tecnológico", controles: [
+    { id: "equipos",   icono: "🖥️", nombre: "Seguridad de Activos", controles: [
       ["5.1", "Servidores sin Alertas"],
       ["5.2", "Switches y Routers Conectados"],
       ["5.4", "Aires de Precisión Funcionando"] ] },
-    { id: "redes",     icono: "🌐", nombre: "Conectividad y Redes", controles: [
+    { id: "redes",     icono: "🌐", nombre: "Seguridad de Redes", controles: [
       ["6.1", "Servicio de ENATREL sin Alertas"],
       ["6.2", "Nagios sin Alertas"],
       ["6.4", "WAF sin Alertas"] ] }
@@ -3853,7 +3853,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       ? `${pl(cmp.empeoro || 0, "control empeoró", "controles empeoraron")} · ${pl(cmp.resueltos || 0, "pendiente resuelto", "pendientes resueltos")} · ${pl(cmp.abiertos || 0, "pendiente abierto", "pendientes abiertos")} · ${pl(cmp.eventos || 0, "evento registrado", "eventos registrados")}`
       : "Primer reporte del turno: no hay reporte anterior para comparar.";
 
-    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte ${final.numero} - Jornada ${esc(final.jornada)} - ${esc(final.usuario)}</title>
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(nombreDocumentoReporte(final))}</title>
 <style>
   @page { size: letter; margin: 14mm 14mm 16mm; }
   * { box-sizing: border-box; }
@@ -3939,8 +3939,21 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   }
 
   // Imprime el documento desde un marco oculto (no muestra la pantalla).
+  // Nombre del documento (y del PDF al guardarlo): Reporte-UMOI-DIURNO-2-de-3-Oscar-Hidalgo
+  function nombreDocumentoReporte(final) {
+    return `Reporte-UMOI-${String(final.turno || "").toUpperCase()}-${final.numero}-de-3-${final.usuario}`.replace(/[\\/:*?"<>|\s]+/g, "-");
+  }
+
   function imprimirDocumentoReporte(html) {
     window.__ultimoDocumentoReporte = html; // útil para revisarlo/probarlo
+    // El navegador propone como nombre del PDF el título del documento:
+    // se usa el del reporte mientras dura la impresión.
+    const tituloDoc = (html.match(/<title>([^<]*)<\/title>/) || [])[1];
+    const tituloOriginal = document.title;
+    if (tituloDoc) {
+      document.title = tituloDoc;
+      setTimeout(() => { document.title = tituloOriginal; }, 5000);
+    }
     const marco = document.createElement("iframe");
     marco.setAttribute("aria-hidden", "true");
     marco.style.cssText = "position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;";
@@ -4537,11 +4550,11 @@ function generarInformePNG() {
   const nivelClima = t => (t < 18 || t > 27) ? "bad" : (t <= 19 || t >= 26) ? "warn" : "ok";
   const fmtHM = min => { const t = Math.round(Math.abs(min)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
   const SECCIONES_INF = [
-    ["Control de Acceso", ["2.2", "2.3", "2.5"]],
-    ["Control de Ambiente", ["3.1", "3.3", "3.4", "3.5"]],
-    ["Infraestructura Eléctrica", ["4.1", "4.2", "4.3"]],
-    ["Equipamiento Tecnológico", ["5.1", "5.2", "5.4"]],
-    ["Conectividad y Redes", ["6.1", "6.2", "6.4"]]
+    ["Seguridad Física", ["2.2", "2.3", "2.5"]],
+    ["Seguridad Ambiental", ["3.1", "3.3", "3.4", "3.5"]],
+    ["Seguridad Energética", ["4.1", "4.2", "4.3"]],
+    ["Seguridad de Activos", ["5.1", "5.2", "5.4"]],
+    ["Seguridad de Redes", ["6.1", "6.2", "6.4"]]
   ];
   const VALOR = { cumple: 100, parcial: 50, nocumple: 0 };
   const ESTADO_TXT = { verde: "Sin novedad", amarillo: "Con incidencias menores", rojo: "Con incidencias críticas" };
@@ -4625,20 +4638,52 @@ function generarInformePNG() {
       <rect x="19" y="6" width="1.6" height="40" rx=".8" fill="#fff" opacity=".6"/>
       ${marca(27, "27°")}${marca(18, "18°")}</svg>`;
   }
-  // Matraz redondo (reemplaza el gráfico de pastel): se llena con el
-  // cumplimiento global y muestra su porcentaje.
-  function matrazSVG(pct, nivel) {
-    const p = Math.max(0, Math.min(100, pct)), col = COLOR[nivel], id = "fm" + (svgId++);
-    const cy = 112, r = 74, topBola = cy - r, y = topBola + 2 * r * (1 - p / 100);
-    return `<svg width="190" height="200" viewBox="0 0 190 200">
-      <defs><clipPath id="${id}"><circle cx="95" cy="${cy}" r="${r}"/></clipPath></defs>
-      <rect x="76" y="6" width="38" height="12" rx="3" fill="#E6EBEE" stroke="#9AA5AC" stroke-width="2"/>
-      <rect x="80" y="16" width="30" height="${topBola - 16 + 8}" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="2"/>
-      <circle cx="95" cy="${cy}" r="${r}" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="2.2"/>
-      <g clip-path="url(#${id})">${p > 0 ? `<path d="M15 ${y} q10 -6 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 V${cy + r + 4} H15 Z" fill="${col}"/>` : ""}</g>
-      <circle cx="95" cy="${cy}" r="${r}" fill="none" stroke="#9AA5AC" stroke-width="2.2"/>
-      <path d="M45 ${cy - 36} a64 64 0 0 1 22 -24" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none" opacity=".6"/>
-      <text x="95" y="${cy + 12}" text-anchor="middle" font-size="36" font-weight="900" fill="#1F2A30" stroke="#fff" stroke-width="5" paint-order="stroke">${Math.round(p)}%</text></svg>`;
+  // Pastel del cumplimiento global: una porción por cumple / parcial / no cumple.
+  function pastelSVG(partes) {
+    const total = partes.reduce((a, x) => a + x.n, 0), cx = 100, cy = 100, r = 88;
+    const visibles = partes.filter(x => x.n > 0);
+    let ang = -Math.PI / 2, svg = "";
+    const pt = (a, rr) => [cx + rr * Math.cos(a), cy + rr * Math.sin(a)];
+    visibles.forEach(x => {
+      const da = (x.n / total) * Math.PI * 2;
+      if (visibles.length === 1) svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${x.col}" stroke="#fff" stroke-width="3"/>`;
+      else {
+        const [x1, y1] = pt(ang, r), [x2, y2] = pt(ang + da, r);
+        svg += `<path d="M${cx} ${cy} L${x1.toFixed(2)} ${y1.toFixed(2)} A${r} ${r} 0 ${da > Math.PI ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z" fill="${x.col}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>`;
+      }
+      const pctTxt = Math.round((x.n / total) * 100);
+      if (pctTxt >= 4) {
+        const [tx, ty] = visibles.length === 1 ? [cx, cy] : pt(ang + da / 2, r * (pctTxt < 12 ? 0.78 : 0.6));
+        svg += `<text x="${tx.toFixed(1)}" y="${(ty + 6).toFixed(1)}" text-anchor="middle" font-size="${pctTxt < 12 ? 13 : 18}" font-weight="900" fill="#fff">${pctTxt}%</text>`;
+      }
+      ang += da;
+    });
+    return `<svg width="200" height="200" viewBox="0 0 200 200">${svg}</svg>`;
+  }
+  // Radar (telaraña) con el cumplimiento de cada sección de controles.
+  function radarSVG(secciones) {
+    const W = 700, H = 340, cx = W / 2, cy = 178, R = 122, n = secciones.length;
+    const ang = i => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    const pt = (i, v) => [cx + R * (v / 100) * Math.cos(ang(i)), cy + R * (v / 100) * Math.sin(ang(i))];
+    const poli = v => secciones.map((_, i) => pt(i, v).map(c => c.toFixed(1)).join(",")).join(" ");
+    let svg = "";
+    [25, 50, 75, 100].forEach(v => {
+      svg += `<polygon points="${poli(v)}" fill="${v === 100 ? "#F4F7F8" : "none"}" stroke="#C9D3D9" stroke-width="${v === 100 ? 1.6 : 1}" ${v === 100 ? "" : 'stroke-dasharray="3 3"'}/>`;
+      svg += `<text x="${cx - 5}" y="${cy - R * v / 100 + 12}" text-anchor="end" font-size="9.5" font-weight="700" fill="#9AA5AC">${v}%</text>`;
+    });
+    secciones.forEach((_, i) => { const [x, y] = pt(i, 100); svg += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#C9D3D9" stroke-width="1"/>`; });
+    const datos = secciones.map((s, i) => pt(i, s.pct == null ? 0 : s.pct).map(c => c.toFixed(1)).join(",")).join(" ");
+    svg += `<polygon points="${datos}" fill="#00949F" fill-opacity=".28" stroke="#00949F" stroke-width="2.6" stroke-linejoin="round"/>`;
+    secciones.forEach((s, i) => {
+      const [x, y] = pt(i, s.pct == null ? 0 : s.pct), col = s.pct == null ? "#9AA5AC" : COLOR[nivelPct(s.pct)];
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5.5" fill="${col}" stroke="#fff" stroke-width="2"/>`;
+      const [lx, ly] = pt(i, 100), c = Math.cos(ang(i));
+      const anchor = Math.abs(c) < 0.2 ? "middle" : c > 0 ? "start" : "end";
+      const ox = Math.abs(c) < 0.2 ? 0 : c > 0 ? 12 : -12, oy = Math.sin(ang(i)) < -0.5 ? -26 : Math.sin(ang(i)) > 0.5 ? 18 : -6;
+      svg += `<text x="${(lx + ox).toFixed(1)}" y="${(ly + oy).toFixed(1)}" text-anchor="${anchor}" font-size="11.5" font-weight="800" fill="#1F2A30" letter-spacing=".4">${s.nombre.toUpperCase()}</text>`;
+      svg += `<text x="${(lx + ox).toFixed(1)}" y="${(ly + oy + 17).toFixed(1)}" text-anchor="${anchor}" font-size="15" font-weight="900" fill="${col}">${s.pct == null ? "Sin datos" : Math.round(s.pct) + "%"}</text>`;
+    });
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${svg}</svg>`;
   }
 
   /* ---------- secciones del informe ---------- */
@@ -4648,10 +4693,6 @@ function generarInformePNG() {
       <td><span class="chip" style="background:${COLOR[x.nivel]}">${x.puntualidad}</span></td>
       <td>${x.r ? `<span class="est" style="color:${ESTADO_COL[x.r.estado]}">● ${ESTADO_TXT[x.r.estado] || "—"}</span>` : "—"}</td>
       <td>${x.r ? esc(x.r.resumen) : `<span class="vacio">No se completó este reporte.</span>`}</td></tr>`).join("");
-
-  const tarjetasSeccion = porSeccion.map(s => s.pct == null
-    ? `<div class="sec-card"><div class="sec-sin">Sin datos</div><div class="sec-nom">${s.nombre}</div></div>`
-    : `<div class="sec-card">${frascoSVG(s.pct, nivelPct(s.pct))}<div class="sec-pct" style="color:${COLOR[nivelPct(s.pct)]}">${Math.round(s.pct)}%</div><div class="sec-nom">${s.nombre}</div></div>`).join("");
 
   const tarjetasMed = MEDS.map(m => {
     const vals = reportesUsados.map(r => parseFloat(r.mediciones?.[m.id])).filter(v => !isNaN(v));
@@ -4704,13 +4745,14 @@ function generarInformePNG() {
       #informePNGCaptura .ok { color: #1E6B3E; font-style: normal; font-weight: 700; }
       #informePNGCaptura .chip { display: inline-block; color: #fff; font-weight: 800; font-size: 12px; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
       #informePNGCaptura .est { font-weight: 800; font-size: 12.5px; white-space: nowrap; }
-      #informePNGCaptura .seg { display: grid; grid-template-columns: 250px 1fr; gap: 18px; align-items: center; }
+      #informePNGCaptura .seg { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: stretch; }
       #informePNGCaptura .global { text-align: center; border: 1px solid #E6EBEE; border-radius: 10px; padding: 10px; }
       #informePNGCaptura .global .tit { font-size: 11.5px; font-weight: 800; letter-spacing: 1px; color: #5E6B73; text-transform: uppercase; }
       #informePNGCaptura .leyenda { display: flex; justify-content: center; gap: 12px; font-size: 12.5px; font-weight: 700; margin-top: 4px; }
-      #informePNGCaptura .secs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+      #informePNGCaptura .global .pct-g { font-size: 30px; font-weight: 900; margin: 2px 0 6px; }
+      #informePNGCaptura .radar { text-align: center; border: 1px solid #E6EBEE; border-radius: 10px; padding: 10px; }
+      #informePNGCaptura .radar .tit { font-size: 11.5px; font-weight: 800; letter-spacing: 1px; color: #5E6B73; text-transform: uppercase; }
       #informePNGCaptura .sec-card, #informePNGCaptura .med-card { border: 1px solid #E6EBEE; border-radius: 10px; padding: 12px 8px; text-align: center; }
-      #informePNGCaptura .sec-pct { font-size: 22px; font-weight: 900; margin-top: 4px; }
       #informePNGCaptura .sec-nom { font-size: 11px; font-weight: 800; letter-spacing: .6px; color: #5E6B73; text-transform: uppercase; }
       #informePNGCaptura .sec-sin { font-size: 13px; color: #9AA5AC; font-style: italic; padding: 26px 0; }
       #informePNGCaptura .meds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -4750,9 +4792,11 @@ function generarInformePNG() {
 
       <h2>2. Seguridad TI consolidada</h2>
       ${totalEval ? `<div class="seg">
-        <div class="global"><div class="tit">Cumplimiento global</div>${matrazSVG(pctGlobal, nivelPct(pctGlobal))}
+        <div class="global"><div class="tit">Cumplimiento global</div>
+          <div class="pct-g" style="color:${COLOR[nivelPct(pctGlobal)]}">${Math.round(pctGlobal)}%</div>
+          ${pastelSVG([{ n: nC, col: COLOR.ok }, { n: nP, col: COLOR.warn }, { n: nN, col: COLOR.bad }])}
           <div class="leyenda"><span style="color:${COLOR.ok}">● ${nC} cumple</span><span style="color:${COLOR.warn}">● ${nP} parcial</span><span style="color:${COLOR.bad}">● ${nN} no cumple</span></div></div>
-        <div class="secs">${tarjetasSeccion}</div></div>`
+        <div class="radar"><div class="tit">Cumplimiento por sección</div>${radarSVG(porSeccion)}</div></div>`
         : `<p class="vacio">Sin reportes completados: no hay datos de controles.</p>`}
 
       <h2>3. Mediciones del turno</h2>
@@ -4842,8 +4886,7 @@ function generarInformePNG() {
         terminar();
         return;
       }
-      const fechaArchivo = new Date().toISOString().slice(0, 10);
-      const nombreArchivo = `Informe-Turno-${usuario}-J${jornada}-${turnoTexto}-${fechaArchivo}.png`.replace(/[\\/:*?"<>|\s]+/g, "_");
+      const nombreArchivo = `Informe-de-Turno-UMOI-${turnoTexto.toUpperCase()}-${usuario}.png`.replace(/[\\/:*?"<>|\s]+/g, "-");
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = nombreArchivo;
@@ -5521,11 +5564,11 @@ function esCanvasVacio(canvasId) {
 // ✅ VALIDACIÓN antes de evaluar
 function validarFormularioAntesDeEvaluar() {
   const secciones = [
-    "Control de Acceso",
-    "Control de Ambiente",
-    "Infraestructura Eléctrica",
-    "Equipamiento Tecnológico",
-    "Conectividad y Redes"
+    "Seguridad Física",
+    "Seguridad Ambiental",
+    "Seguridad Energética",
+    "Seguridad de Activos",
+    "Seguridad de Redes"
   ];
 
   for (const nombre of secciones) {
@@ -5714,11 +5757,11 @@ function clasificarTermometro(valor) {
 function calcularEvaluacion() {
 if (!validarFormularioAntesDeEvaluar()) return;
   const secciones = [
-    "Control de Acceso",
-    "Control de Ambiente",
-    "Infraestructura Eléctrica",
-    "Equipamiento Tecnológico",
-    "Conectividad y Redes"
+    "Seguridad Física",
+    "Seguridad Ambiental",
+    "Seguridad Energética",
+    "Seguridad de Activos",
+    "Seguridad de Redes"
   ];
 
   let totalCumple = 0, totalParcial = 0, totalNoCumple = 0;
@@ -7142,11 +7185,11 @@ if (termometro) {
 
 
    const secciones = [
-    "Control de Acceso",
-    "Control de Ambiente",
-    "Infraestructura Eléctrica",
-    "Equipamiento Tecnológico",
-    "Conectividad y Redes"
+    "Seguridad Física",
+    "Seguridad Ambiental",
+    "Seguridad Energética",
+    "Seguridad de Activos",
+    "Seguridad de Redes"
   ]; 
 
 
