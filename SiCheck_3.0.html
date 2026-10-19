@@ -954,6 +954,28 @@ html.modo-foco-boton #VistaHome {
 .btn-informe-novedad + .btn-eliminar-novedad {
   margin-left:6px;
 }
+/* 🗃️ Archivar / Archivos (exclusivo de Jorge Quintana) */
+.btn-archivar-novedad {
+  background:#6d4c2f;
+  color:#ffd600;
+  border:none;
+  border-radius:14px;
+  padding:3px 10px;
+  font-size:11.5px;
+  font-weight:700;
+  cursor:pointer;
+  margin-left:6px;
+}
+.btn-archivar-novedad:hover {
+  background:#4e3420;
+}
+.banner-btn-archivos { background:#6d4c2f; color:#ffd600; }
+.banner-btn-archivos:hover { background:white; color:#6d4c2f; font-weight:900; }
+.archivo-lista { max-height:60vh; overflow-y:auto; text-align:left; margin-top:6px; }
+.archivo-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e2d6c8; border-left:5px solid #6d4c2f; border-radius:10px; background:#fffdf7; margin-bottom:8px; }
+.archivo-titulo { flex:1; font-weight:700; color:#3e2a17; font-size:14px; word-break:break-word; }
+.archivo-item .btn-informe-novedad { margin-left:0; }
+.archivo-vacio { color:#888; font-style:italic; padding:18px 0; text-align:center; }
 .comentarios-panel {
   margin-top:8px;
   padding-top:8px;
@@ -2964,6 +2986,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div id="saludoUsuario" class="banner-saludo"> </div>
 
       <div class="banner-col-acciones">
+        <button id="btnArchivos" class="banner-btn-accion banner-btn-archivos" style="display:none" onclick="abrirArchivos()">🗃️ Archivos</button>
         <button id="btnRecibirLlave" class="banner-btn-accion banner-btn-recibir" onclick="document.getElementById('inputRecibirLlave').click()">🗝️ Recibir Llave</button>
         <input type="file" id="inputRecibirLlave" accept="application/json,.json" style="display:none" onchange="recibirLlaveDeTurno(this)">
         <button id="btnEntregarLlave" class="banner-btn-accion banner-btn-entregar" onclick="generarLlaveDeTurno(false)">🗝️ Entregar Llave</button>
@@ -4131,6 +4154,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <button class="btn-pausa" onclick="cerrarModalLlave('modalBienvenida')">
       OK, gracias por recordarlo
     </button>
+  </div>
+</div>
+
+<!-- MODAL ARCHIVOS: novedades archivadas (exclusivo de Jorge Quintana) -->
+<div id="modalArchivos" class="modal-pausa" onclick="if(event.target===this) cerrarArchivos()">
+  <div class="modal-pausa-contenido" style="max-width:720px; padding:30px;">
+    <button class="cerrar-pausa" onclick="cerrarArchivos()">✖</button>
+    <div class="pausa-header" style="margin-bottom:12px; color:#6d4c2f;">🗃️ Archivos</div>
+    <div id="listaArchivos" class="archivo-lista"></div>
   </div>
 </div>
 
@@ -6518,6 +6550,13 @@ function fusionarUnaNovedad(local, entrante) {
     combinada.fechaNovedadEditadaEn = entrante.fechaNovedadEditadaEn;
   }
 
+  // 🗃️ Archivada: si cualquiera de los dos lados la archivó, queda archivada.
+  if (entrante.archivada && !local.archivada) {
+    combinada.archivada = true;
+    combinada.archivadaEn = entrante.archivadaEn;
+    combinada.archivadaPor = entrante.archivadaPor;
+  }
+
   // 👁 Leído por: unión sin duplicar nombres
   combinada.leidoPor = Array.from(new Set([...(local.leidoPor || []), ...(entrante.leidoPor || [])]));
 
@@ -8066,7 +8105,7 @@ function iniciarSistemaPausaActiva(){
             <div class="reacciones-flotante" id="reacciones-flotante-${nv.id}">${renderPickerFlotante(nv.id, nv.reacciones || {})}</div>
           </span>
           <button class="btn-comentarios ${panelesComentariosAbiertos.has(nv.id) ? "activo" : (hayComentariosNoLeidos ? "no-leido" : "")}" data-id="${nv.id}" onclick="toggleComentarios('${nv.id}')">💬${comentarios.length}</button>
-          ${esJorgeQuintana() ? `<button class="btn-informe-novedad" onclick="descargarInformeNovedad('${nv.id}')">📄 Informe</button><button class="btn-eliminar-novedad" onclick="eliminarNovedad('${nv.id}')">🗑️ Eliminar</button>` : ""}
+          ${esJorgeQuintana() ? `<button class="btn-informe-novedad" onclick="descargarInformeNovedad('${nv.id}')">📄 Informe</button><button class="btn-eliminar-novedad" onclick="eliminarNovedad('${nv.id}')">🗑️ Eliminar</button><button class="btn-archivar-novedad" onclick="archivarNovedad('${nv.id}')">🗃️ Archivar</button>` : ""}
         </div>
         <div class="reacciones-panel" id="reacciones-${nv.id}" style="display:${panelesReaccionesAbiertos.has(nv.id) ? "block" : "none"};">
           <div id="reacciones-contenido-${nv.id}">${renderContenidoReacciones(nv.id, nv.reacciones || {})}</div>
@@ -8784,8 +8823,13 @@ function iniciarSistemaPausaActiva(){
     if (wrapper) wrapper.classList.toggle("tiene-texto", busqueda.length > 0);
 
     // 🔒 Solo las novedades del grupo del usuario (Jorge Quintana ve todas).
+    // 🗃️ El botón Archivos solo lo ve Jorge Quintana.
+    const btnArchivos = document.getElementById("btnArchivos");
+    if (btnArchivos) btnArchivos.style.display = esJorgeQuintana() ? "" : "none";
+
+    // 🔒 Las archivadas no aparecen en la lista (se ven en 🗃️ Archivos).
     let novedades = cargarNovedades()
-      .filter(nv => puedeVerNovedad(nv, window.usuarioSeleccionado))
+      .filter(nv => !nv.archivada && puedeVerNovedad(nv, window.usuarioSeleccionado))
       .sort((a, b) => ultimaActividad(b) - ultimaActividad(a));
 
     // 🔍 La búsqueda abarca título, descripción y el texto de los comentarios.
@@ -9115,6 +9159,53 @@ function iniciarSistemaPausaActiva(){
     localStorage.setItem("novedadesEliminadasTI_v1", JSON.stringify(eliminadas));
 
     actualizarNovedadesUI();
+    if (document.getElementById("modalArchivos")?.style.display === "flex") renderArchivos();
+  };
+
+  /* ---------- Archivar novedad (solo Jorge Quintana) ---------- */
+  // La quita de la lista de novedades y la pasa a 🗃️ Archivos, donde se
+  // conserva completa: se puede generar su informe o eliminarla.
+  window.archivarNovedad = function (id) {
+    if (!esJorgeQuintana()) {
+      alert("Solo Jorge Quintana puede archivar novedades.");
+      return;
+    }
+    if (!confirm("¿Archivar esta novedad? Saldrá de la lista de novedades y quedará en 🗃️ Archivos.")) return;
+    const novedades = cargarNovedades();
+    const nv = novedades.find(n => n.id === id);
+    if (!nv) return;
+    nv.archivada = true;
+    nv.archivadaEn = new Date().toISOString();
+    nv.archivadaPor = window.usuarioSeleccionado || "";
+    guardarNovedadesArray(novedades);
+    actualizarNovedadesUI();
+  };
+
+  /* ---------- Modal 🗃️ Archivos ---------- */
+  function renderArchivos() {
+    const cont = document.getElementById("listaArchivos");
+    if (!cont) return;
+    const archivadas = cargarNovedades()
+      .filter(nv => nv.archivada)
+      .sort((a, b) => new Date(b.archivadaEn || 0) - new Date(a.archivadaEn || 0));
+    cont.innerHTML = archivadas.length
+      ? archivadas.map(nv => `
+        <div class="archivo-item">
+          <span class="archivo-titulo">${escaparHTML(nv.titulo)}</span>
+          <button class="btn-informe-novedad" onclick="descargarInformeNovedad('${nv.id}')">📄 Informe</button>
+          <button class="btn-eliminar-novedad" onclick="eliminarNovedad('${nv.id}')">🗑️ Eliminar</button>
+        </div>`).join("")
+      : `<div class="archivo-vacio">No hay novedades archivadas.</div>`;
+  }
+
+  window.abrirArchivos = function () {
+    if (!esJorgeQuintana()) return;
+    renderArchivos();
+    document.getElementById("modalArchivos").style.display = "flex";
+  };
+
+  window.cerrarArchivos = function () {
+    document.getElementById("modalArchivos").style.display = "none";
   };
 
   /* ---------- Modal: abrir / cerrar ---------- */
