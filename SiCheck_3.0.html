@@ -3755,6 +3755,28 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     // 🫙 Frasco de llenado para cada medición (SVG; se imprime igual que en pantalla).
     const COLORES_NIVEL = { ok: "#2E9E5B", warn: "#E8A317", bad: "#D93B3B" };
     const nivelPct = pct => pct >= 90 ? "ok" : pct >= 60 ? "warn" : "bad";
+    // 🌡️ Termómetro (solo climatización): la columna sube según la
+    // temperatura (escala 10–35 °C) y se pinta con el color del nivel;
+    // las marcas 18° y 27° delimitan la franja correcta.
+    function termometro(pct, nivel, marcas) {
+      const p = Math.max(0, Math.min(100, pct));
+      const color = COLORES_NIVEL[nivel];
+      const tuboTop = 5, tuboBase = 52, alto = tuboBase - tuboTop;
+      const yCol = tuboTop + alto * (1 - p / 100);
+      const lineas = (marcas || []).map(mk => { const my = tuboTop + alto * (1 - mk.pct / 100);
+        return `<line x1="13" x2="29" y1="${my}" y2="${my}" stroke="#1F2A30" stroke-width=".9" stroke-dasharray="2 1.4"/><text x="31" y="${my + 2.6}" font-size="7" font-weight="700" fill="#5E6B73">${mk.txt}</text>`; }).join("");
+      const rayas = [0, 20, 40, 60, 80, 100].map(t => { const ty = tuboTop + alto * (1 - t / 100);
+        return `<line x1="11" x2="14" y1="${ty}" y2="${ty}" stroke="#9AA5AC" stroke-width=".8"/>`; }).join("");
+      return `<svg width="50" height="68" viewBox="0 0 50 68" aria-hidden="true">
+        <rect x="16" y="2" width="10" height="54" rx="5" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="1.3"/>
+        <circle cx="21" cy="58" r="8.5" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="1.3"/>
+        <rect x="18.5" y="${yCol}" width="5" height="${58 - yCol}" rx="2.5" fill="${color}"/>
+        <circle cx="21" cy="58" r="6.2" fill="${color}"/>
+        <rect x="19" y="6" width="1.6" height="40" rx=".8" fill="#fff" opacity=".6"/>
+        ${rayas}${lineas}
+      </svg>`;
+    }
+
     function frasco(pct, nivel, marcas) {
       const p = Math.max(0, Math.min(100, pct));
       const top = 10, alto = 52, y = top + alto * (1 - p / 100);
@@ -3794,7 +3816,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       } else if (esUps) { pct = (v / UPS_100_MIN) * 100; nivel = nivelPct(pct); }
       else { pct = v; nivel = nivelPct(v); }
       const pctTxt = esUps ? ` <small style="font-size:10px;font-weight:700;color:#5E6B73">(${Math.round(Math.min(100, pct))} %)</small>` : "";
-      return `<td><div class="mcel">${frasco(pct, nivel, marcas)}<div class="mtx">
+      return `<td><div class="mcel">${m.id === "clima" ? termometro(pct, nivel, marcas) : frasco(pct, nivel, marcas)}<div class="mtx">
         <div class="mv" style="color:${COLORES_NIVEL[nivel]}">${val}${pctTxt}</div><div class="mk">${m.nombre}</div>
         <div class="md">${varTxt === "—" ? "Sin dato anterior" : "Variación: " + varTxt}</div></div></div></td>`;
     }).join("");
