@@ -3735,6 +3735,159 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     quitarCom(i) { rpt.comunicaciones.splice(i, 1); guardarBorrador(); renderComunicaciones(); },
   };
 
+  /* ---------- 📄 Documento del reporte (independiente del formulario) ----------
+     Se arma con los datos ya guardados y se imprime desde un marco oculto,
+     así el PDF no muestra botones, campos ni nada de la pantalla. */
+  function construirDocumentoReporte(final, ctx) {
+    const ESTADO = { verde: ["Sin novedad", "#2E9E5B", "#EAF7EF"], amarillo: ["Con incidencias menores", "#B07A00", "#FFF4D6"], rojo: ["Con incidencias críticas", "#B3261E", "#FDE7E7"] };
+    const [estTxt, estColor, estFondo] = ESTADO[final.estado] || ["—", "#5E6B73", "#EEF1F3"];
+    const IMP = { bajo: "Bajo", medio: "Medio", alto: "Alto", na: "—" };
+    const EST = { abierto: "Abierto", proceso: "En proceso", observacion: "En observación", resuelto: "Resuelto", registrado: "Registrado" };
+    const fechaLarga = iso => new Date(iso).toLocaleDateString("es-NI", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+    // Mediciones con variación vs. el reporte anterior (texto simple).
+    const antMed = ctx.anterior ? ctx.anterior.mediciones || {} : {};
+    const filaMed = MEDICIONES.map(m => {
+      const v = final.mediciones[m.id], a = parseFloat(antMed[m.id]);
+      const esUps = m.id === "autonomiaUpsMin";
+      const val = esUps ? `${fmtHM(v)} h` : `${v} ${m.unidad}`;
+      let varTxt = "—";
+      if (!isNaN(a)) {
+        const d = Math.round((v - a) * 100) / 100;
+        varTxt = d === 0 ? "Sin cambio" : `${d > 0 ? "+" : "−"}${esUps ? fmtHM(d) + " h" : Math.abs(d) + " " + m.unidad}`;
+      }
+      return `<td><div class="mv">${val}</div><div class="mk">${m.nombre}</div><div class="md">${varTxt === "—" ? "Sin dato anterior" : "Variación: " + varTxt}</div></td>`;
+    }).join("");
+
+    // Controles: conteo + solo las desviaciones.
+    const vals = TODOS_CONTROLES.map(c => final.controles[c.id]?.valor);
+    const nC = vals.filter(v => v === "cumple").length, nP = vals.filter(v => v === "parcial").length, nN = vals.filter(v => v === "nocumple").length;
+    const desvios = TODOS_CONTROLES.filter(c => final.controles[c.id]?.valor !== "cumple");
+    const tablaDesvios = desvios.length ? `<table><tr><th style="width:44%">Control</th><th style="width:14%">Resultado</th><th>Motivo</th></tr>${desvios.map(c => {
+      const ctrl = final.controles[c.id];
+      return `<tr><td><b>${esc(c.id)}</b> ${esc(c.nombre)}<div class="sub">${esc(c.seccion)}</div></td><td><span class="et et-${ctrl.valor}">${ETIQUETA[ctrl.valor]}</span></td><td>${esc(ctrl.motivo || "")}</td></tr>`;
+    }).join("")}</table>` : `<p class="ok">✔ Todos los controles evaluados cumplen.</p>`;
+
+    const eventos = final.bitacora || [];
+    const tablaEventos = eventos.length ? `<table><tr><th style="width:10%">Hora</th><th style="width:13%">Origen</th><th>Evento</th><th style="width:10%">Impacto</th><th style="width:13%">Estado</th></tr>${eventos.map(e => `
+      <tr><td>${e.tipo === "AGREGADO" ? esc(e.hora || "") : hhmm(e.en)}</td><td>${e.tipo === "AGREGADO" ? "Analista" : e.tipo.charAt(0) + e.tipo.slice(1).toLowerCase()}</td>
+      <td>${esc(e.texto)}${e.detalle ? `<div class="sub">${esc(e.detalle)}</div>` : ""}</td><td>${IMP[e.impacto] || "—"}</td><td>${EST[e.estado] || "—"}</td></tr>`).join("")}</table>`
+      : `<p class="vacio">No se registraron eventos en el período.</p>`;
+
+    const coms = final.comunicaciones || [];
+    const tablaComs = coms.length ? `<table><tr><th style="width:10%">Hora</th><th style="width:24%">Notificado a</th><th style="width:12%">Medio</th><th>Motivo</th><th style="width:12%">Ticket</th></tr>${coms.map(c => `
+      <tr><td>${esc(c.hora)}</td><td>${esc(c.a)}</td><td>${esc(c.medio)}</td><td>${esc(c.motivo)}</td><td>${esc(c.ticket) || "—"}</td></tr>`).join("")}</table>`
+      : `<p class="vacio">No se registraron comunicaciones ni escalamientos.</p>`;
+
+    const tablaPend = ctx.pendientesAbiertos.length ? `<table><tr><th style="width:36%">Pendiente</th><th>Motivo</th><th style="width:20%">Origen</th><th style="width:18%">Desde</th></tr>${ctx.pendientesAbiertos.map(p => `
+      <tr><td>${esc(p.texto)}</td><td>${esc(p.motivo || "")}</td><td>${esc(p.origen)}</td><td>${fechaCorta(p.desde)}</td></tr>`).join("")}</table>`
+      : `<p class="ok">✔ No quedan pendientes abiertos.</p>`;
+    const resueltos = ctx.pendientesResueltos.length
+      ? `<p class="sub2"><b>Resueltos en este reporte:</b> ${ctx.pendientesResueltos.map(p => esc(p.texto)).join(" · ")}</p>` : "";
+
+    const cmp = final.comparacion || {};
+    const pl = (n, s, p) => `${n} ${n === 1 ? s : p}`;
+    const lineaCmp = ctx.anterior
+      ? `${pl(cmp.empeoro || 0, "control empeoró", "controles empeoraron")} · ${pl(cmp.resueltos || 0, "pendiente resuelto", "pendientes resueltos")} · ${pl(cmp.abiertos || 0, "pendiente abierto", "pendientes abiertos")} · ${pl(cmp.eventos || 0, "evento registrado", "eventos registrados")}`
+      : "Primer reporte del turno: no hay reporte anterior para comparar.";
+
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte ${final.numero} - Jornada ${esc(final.jornada)} - ${esc(final.usuario)}</title>
+<style>
+  @page { size: letter; margin: 14mm 14mm 16mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #1F2A30; font-size: 11px; line-height: 1.4; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .enc { display: grid; grid-template-columns: 1.3fr 2fr; border: 1.5px solid #00949F; border-radius: 6px; overflow: hidden; }
+  .enc-izq { background: #00949F; color: #fff; padding: 12px 16px; }
+  .enc-izq .org { font-size: 9.5px; letter-spacing: 1.6px; opacity: .9; }
+  .enc-izq h1 { margin: 4px 0 2px; font-size: 19px; letter-spacing: .4px; }
+  .enc-izq .num { font-size: 12px; font-weight: 700; opacity: .95; }
+  .enc-der { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .enc-der div { padding: 7px 12px; border-left: 1px solid #D7DEE3; border-bottom: 1px solid #D7DEE3; }
+  .enc-der div.ancho2 { grid-column: span 2; }
+  .enc-der div:nth-last-child(-n+2) { border-bottom: none; }
+  .k { display: block; font-size: 8.5px; font-weight: 800; letter-spacing: 1px; color: #5E6B73; text-transform: uppercase; }
+  .v { font-size: 12px; font-weight: 700; }
+  .estado { margin-top: 10px; border-left: 5px solid ${estColor}; background: ${estFondo}; padding: 9px 14px; border-radius: 4px; }
+  .estado .t { font-weight: 800; color: ${estColor}; font-size: 12.5px; text-transform: uppercase; letter-spacing: .6px; }
+  .estado p { margin: 3px 0 0; }
+  h2 { font-size: 11px; color: #007A83; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 5px; padding-bottom: 3px; border-bottom: 1.5px solid #00949F; break-after: avoid; page-break-after: avoid; }
+  .bloque { break-inside: avoid; page-break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.8px; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th { text-align: left; font-size: 8.8px; letter-spacing: .7px; text-transform: uppercase; color: #5E6B73; background: #F1F5F7; padding: 5px 7px; border-bottom: 1px solid #D7DEE3; }
+  td { padding: 4px 7px; border-bottom: 1px solid #E6EBEE; vertical-align: top; }
+  .med td { width: 25%; text-align: center; border: 1px solid #E6EBEE; padding: 8px 6px; }
+  .mv { font-size: 17px; font-weight: 800; }
+  .mk { font-size: 9px; font-weight: 800; letter-spacing: .7px; color: #5E6B73; text-transform: uppercase; }
+  .md { font-size: 9.5px; color: #5E6B73; margin-top: 2px; }
+  .sub { font-size: 9.5px; color: #5E6B73; }
+  .sub2 { font-size: 10.5px; color: #1E6B3E; margin: 6px 0 0; }
+  .ok { color: #1E6B3E; font-weight: 700; margin: 2px 0; }
+  .vacio { color: #5E6B73; font-style: italic; margin: 2px 0; }
+  .resumen-ctrl { margin: 0 0 6px; font-weight: 700; }
+  .et { font-size: 9.5px; font-weight: 800; padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
+  .et-parcial { background: #FFF4C2; color: #B8860B; }
+  .et-nocumple { background: #FADBD8; color: #7B1E1E; }
+  .reco { border: 1px solid #F3DFA6; background: #FFF8E6; padding: 8px 12px; border-radius: 4px; margin: 0; }
+  .pie { margin-top: 18px; padding-top: 6px; border-top: 1px solid #D7DEE3; font-size: 9px; color: #5E6B73; display: flex; justify-content: space-between; }
+</style></head><body>
+  <div class="enc">
+    <div class="enc-izq">
+      <div class="org">SICHECK · MONITOREO TI</div>
+      <h1>Reporte de Monitoreo</h1>
+      <div class="num">Reporte ${final.numero} de 3 · Turno ${esc(final.turno)}</div>
+    </div>
+    <div class="enc-der">
+      <div><span class="k">Jornada</span><span class="v">${esc(final.jornada)}</span></div>
+      <div><span class="k">Fecha</span><span class="v">${fechaLarga(final.enviadoEn)}</span></div>
+      <div class="ancho2"><span class="k">Analista</span><span class="v">${esc(final.usuario)}</span></div>
+      <div class="ancho2"><span class="k">Período reportado</span><span class="v">${hhmm(final.periodoDesde)} – ${hhmm(final.periodoHasta)} · ${duracion(new Date(final.periodoHasta) - new Date(final.periodoDesde))}</span></div>
+      <div class="ancho2"><span class="k">Reporte anterior</span><span class="v">${ctx.anterior ? `Reporte ${ctx.anterior.numero} · ${esc(ctx.anterior.usuario)} · ${hhmm(ctx.anterior.enviadoEn)}` : "Primero del turno"}</span></div>
+    </div>
+  </div>
+
+  <div class="estado"><div class="t">● ${estTxt}</div><p>${esc(final.resumen)}</p></div>
+
+  <h2>Mediciones</h2>
+  <table class="med"><tr>${filaMed}</tr></table>
+
+  <h2>Controles</h2>
+  <p class="resumen-ctrl">${TODOS_CONTROLES.length} controles evaluados: ${nC} cumplen${nP ? ` · ${nP} parcial${nP === 1 ? "" : "es"}` : ""}${nN ? ` · ${nN} no cumple${nN === 1 ? "" : "n"}` : ""}</p>
+  ${tablaDesvios}
+
+  <h2>Eventos del período</h2>
+  ${tablaEventos}
+
+  <h2>Comunicaciones y escalamientos</h2>
+  ${tablaComs}
+
+  <h2>Pendientes abiertos al cierre del reporte</h2>
+  ${tablaPend}${resueltos}
+
+  <div class="bloque"><h2>Comparación con el reporte anterior</h2>
+  <p style="margin:0">${lineaCmp}</p></div>
+
+  ${final.recomendaciones ? `<div class="bloque"><h2>Recomendaciones para el siguiente corte</h2><p class="reco">${esc(final.recomendaciones)}</p></div>` : ""}
+
+  <div class="pie"><span>Generado por SiCheck · ${new Date(final.enviadoEn).toLocaleString("es-NI")}</span><span>${esc(final.usuario)} · Grupo ${final.grupo === "LN" ? "León" : "Managua"}</span></div>
+</body></html>`;
+  }
+
+  // Imprime el documento desde un marco oculto (no muestra la pantalla).
+  function imprimirDocumentoReporte(html) {
+    window.__ultimoDocumentoReporte = html; // útil para revisarlo/probarlo
+    const marco = document.createElement("iframe");
+    marco.setAttribute("aria-hidden", "true");
+    marco.style.cssText = "position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;";
+    document.body.appendChild(marco);
+    marco.onload = () => {
+      try { marco.contentWindow.focus(); marco.contentWindow.print(); }
+      catch (e) { console.error("No se pudo imprimir el reporte:", e); }
+      setTimeout(() => marco.remove(), 60000);
+    };
+    marco.srcdoc = html;
+  }
+
   /* ---------- validar y guardar ---------- */
   function fallo(idSeccion, mensaje) {
     const sec = document.getElementById(idSeccion);
@@ -3775,11 +3928,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
     // 1) Pendientes: los de controles en Parcial / No cumple (con su motivo);
     //    los que vuelven a "Cumple" quedan resueltos.
+    const comparacionFinal = calcularComparacion(); // antes de cerrar pendientes
     const pendientes = leer(LS_PENDIENTES, []);
+    const resueltosAhora = [];
     TODOS_CONTROLES.forEach(c => {
       const ctrl = rpt.controles[c.id];
       const p = pendientes.find(x => x.clave === "ctrl:" + c.id && x.estado !== "resuelto" && enGrupo(x));
-      if (ctrl.valor === "cumple" && p) { p.estado = "resuelto"; p.actualizadoEn = ahoraIso; p.resueltoPor = rpt.usuario; }
+      if (ctrl.valor === "cumple" && p) { p.estado = "resuelto"; p.actualizadoEn = ahoraIso; p.resueltoPor = rpt.usuario; resueltosAhora.push(p); }
       if (ctrl.valor !== "cumple") {
         const texto = `${c.id} ${c.nombre}`;
         const motivo = (ctrl.motivo || "").trim();
@@ -3799,7 +3954,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       bitacora: rpt.bitacora.filter(e => e.incluir).map(({ incluir, ...e }) => e),
       mediciones: Object.fromEntries(MEDICIONES.map(m => [m.id, parseFloat(rpt.mediciones[m.id])])),
       controles: rpt.controles, comunicaciones: rpt.comunicaciones,
-      recomendaciones: rpt.recomendaciones.trim(), comparacion: calcularComparacion(), actualizadoEn: ahoraIso
+      recomendaciones: rpt.recomendaciones.trim(), comparacion: comparacionFinal, actualizadoEn: ahoraIso
     };
     const reportes = leer(LS_REPORTES, []);
     reportes.push(final);
@@ -3821,8 +3976,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     localStorage.removeItem(LS_EN_CURSO);
     localStorage.removeItem(LS_BORRADOR);
 
-    // 4) Imprimir / guardar como PDF y volver a Home con el botón bloqueado.
-    window.print();
+    // 4) Documento del reporte (resumido, independiente del formulario):
+    //    se abre la impresión para guardarlo como PDF. Luego, a Home.
+    imprimirDocumentoReporte(construirDocumentoReporte(final, {
+      anterior: rpt.anterior,
+      pendientesAbiertos: pendientes.filter(x => enGrupo(x) && x.estado !== "resuelto"),
+      pendientesResueltos: resueltosAhora
+    }));
     rpt = null;
     document.getElementById("VistaCheck").style.display = "none";
     document.getElementById("VistaHome").style.display = "block";
