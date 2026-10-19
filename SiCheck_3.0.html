@@ -3939,9 +3939,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   }
 
   // Imprime el documento desde un marco oculto (no muestra la pantalla).
-  // Nombre del documento (y del PDF al guardarlo): Reporte-UMOI-DIURNO-2-de-3-Oscar-Hidalgo
+  // Nombre del documento (y del PDF al guardarlo): Reporte-292-UMOI-DIURNO-2-de-3-Oscar-Hidalgo
   function nombreDocumentoReporte(final) {
-    return `Reporte-UMOI-${String(final.turno || "").toUpperCase()}-${final.numero}-de-3-${final.usuario}`.replace(/[\\/:*?"<>|\s]+/g, "-");
+    return `Reporte-${final.jornada}-UMOI-${String(final.turno || "").toUpperCase()}-${final.numero}-de-3-${final.usuario}`.replace(/[\\/:*?"<>|\s]+/g, "-");
   }
 
   function imprimirDocumentoReporte(html) {
@@ -4886,7 +4886,7 @@ function generarInformePNG() {
         terminar();
         return;
       }
-      const nombreArchivo = `Informe-de-Turno-UMOI-${turnoTexto.toUpperCase()}-${usuario}.png`.replace(/[\\/:*?"<>|\s]+/g, "-");
+      const nombreArchivo = `Informe-${jornada}-UMOI-${turnoTexto.toUpperCase()}-${usuario}.png`.replace(/[\\/:*?"<>|\s]+/g, "-");
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = nombreArchivo;
