@@ -974,7 +974,19 @@ html.modo-foco-boton #VistaHome {
 .archivo-lista { max-height:60vh; overflow-y:auto; text-align:left; margin-top:6px; }
 .archivo-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e2d6c8; border-left:5px solid #6d4c2f; border-radius:10px; background:#fffdf7; margin-bottom:8px; }
 .archivo-titulo { flex:1; font-weight:700; color:#3e2a17; font-size:14px; word-break:break-word; }
-.archivo-item .btn-informe-novedad { margin-left:0; }
+.archivo-item .btn-informe-novedad, .archivo-item .btn-eliminar-novedad { margin-left:0; }
+.btn-desarchivar-novedad {
+  background:#2e7d32;
+  color:#fff;
+  border:none;
+  border-radius:14px;
+  padding:3px 10px;
+  font-size:11.5px;
+  cursor:pointer;
+}
+.btn-desarchivar-novedad:hover {
+  background:#1b5e20;
+}
 .archivo-vacio { color:#888; font-style:italic; padding:18px 0; text-align:center; }
 .comentarios-panel {
   margin-top:8px;
@@ -6550,11 +6562,14 @@ function fusionarUnaNovedad(local, entrante) {
     combinada.fechaNovedadEditadaEn = entrante.fechaNovedadEditadaEn;
   }
 
-  // 🗃️ Archivada: si cualquiera de los dos lados la archivó, queda archivada.
-  if (entrante.archivada && !local.archivada) {
-    combinada.archivada = true;
+  // 🗃️ Archivada / desarchivada: gana el cambio más reciente.
+  const aLocal = new Date(local.archivoCambiadoEn || local.archivadaEn || 0).getTime();
+  const aEntrante = new Date(entrante.archivoCambiadoEn || entrante.archivadaEn || 0).getTime();
+  if (aEntrante > aLocal) {
+    combinada.archivada = !!entrante.archivada;
     combinada.archivadaEn = entrante.archivadaEn;
     combinada.archivadaPor = entrante.archivadaPor;
+    combinada.archivoCambiadoEn = entrante.archivoCambiadoEn || entrante.archivadaEn;
   }
 
   // 👁 Leído por: unión sin duplicar nombres
@@ -9177,8 +9192,27 @@ function iniciarSistemaPausaActiva(){
     nv.archivada = true;
     nv.archivadaEn = new Date().toISOString();
     nv.archivadaPor = window.usuarioSeleccionado || "";
+    nv.archivoCambiadoEn = nv.archivadaEn;
     guardarNovedadesArray(novedades);
     actualizarNovedadesUI();
+  };
+
+  /* ---------- Desarchivar novedad (solo Jorge Quintana) ---------- */
+  // La devuelve a la lista de novedades tal como estaba.
+  window.desarchivarNovedad = function (id) {
+    if (!esJorgeQuintana()) {
+      alert("Solo Jorge Quintana puede desarchivar novedades.");
+      return;
+    }
+    if (!confirm("¿Desarchivar esta novedad? Volverá a la lista de novedades.")) return;
+    const novedades = cargarNovedades();
+    const nv = novedades.find(n => n.id === id);
+    if (!nv) return;
+    nv.archivada = false;
+    nv.archivoCambiadoEn = new Date().toISOString();
+    guardarNovedadesArray(novedades);
+    actualizarNovedadesUI();
+    renderArchivos();
   };
 
   /* ---------- Modal 🗃️ Archivos ---------- */
@@ -9194,6 +9228,7 @@ function iniciarSistemaPausaActiva(){
           <span class="archivo-titulo">${escaparHTML(nv.titulo)}</span>
           <button class="btn-informe-novedad" onclick="descargarInformeNovedad('${nv.id}')">📄 Informe</button>
           <button class="btn-eliminar-novedad" onclick="eliminarNovedad('${nv.id}')">🗑️ Eliminar</button>
+          <button class="btn-desarchivar-novedad" onclick="desarchivarNovedad('${nv.id}')">📤 Desarchivar</button>
         </div>`).join("")
       : `<div class="archivo-vacio">No hay novedades archivadas.</div>`;
   }
