@@ -3298,6 +3298,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   const fmtHM = min => { const t = Math.round(Math.abs(min)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
   // Colores de barra por porcentaje (combustible y UPS): 90–100 verde, 60–89 amarillo, 0–59 rojo.
   const colorPorcentaje = pct => pct >= 90 ? "var(--ok)" : pct >= 60 ? "var(--warn)" : "var(--bad)";
+  // Climatización: 18–27 °C es correcto; a 1 °C o menos de un límite
+  // (18–19 y 26–27, incluidos 18 y 27) es alerta; fuera del rango, rojo.
+  const nivelClima = t => (t < 18 || t > 27) ? "bad" : (t <= 19 || t >= 26) ? "warn" : "ok";
 
   /* ---------- utilidades ---------- */
   const esc = s => { const d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; };
@@ -3502,7 +3505,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const def = MEDICIONES.find(m => m.id === id);
     let ancho = 0, color = "var(--ok)";
     if (!isNaN(v)) {
-      if (id === "clima") { ancho = Math.min(100, Math.max(0, (v / 35) * 100)); color = (v >= 18 && v <= 27) ? "var(--ok)" : "var(--bad)"; if (v > 25 && v <= 27) color = "var(--warn)"; }
+      if (id === "clima") { ancho = Math.min(100, Math.max(0, ((v - 10) / 25) * 100)); color = `var(--${nivelClima(v)})`; }
       else if (id === "autonomiaUpsMin") { const pct = (v / UPS_100_MIN) * 100; ancho = Math.min(100, Math.max(0, pct)); color = colorPorcentaje(pct); }
       else { ancho = Math.min(100, Math.max(0, v)); color = colorPorcentaje(v); }
     }
@@ -3744,6 +3747,32 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const IMP = { bajo: "Bajo", medio: "Medio", alto: "Alto", na: "—" };
     const EST = { abierto: "Abierto", proceso: "En proceso", observacion: "En observación", resuelto: "Resuelto", registrado: "Registrado" };
     const fechaLarga = iso => new Date(iso).toLocaleDateString("es-NI", { day: "2-digit", month: "2-digit", year: "numeric" });
+    // En el documento: horas en formato 24 h y duración abreviada ("2 h 55 m.").
+    const h24 = iso => { const d = new Date(iso); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+    const fecha24 = iso => { const d = new Date(iso); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${h24(iso)}`; };
+    const durCorta = ms => { const t = Math.max(0, Math.round(ms / 60000)); const h = Math.floor(t / 60), m = t % 60; return h ? `${h} h ${String(m).padStart(2, "0")} m.` : `${m} m.`; };
+
+    // 🫙 Frasco de llenado para cada medición (SVG; se imprime igual que en pantalla).
+    const COLORES_NIVEL = { ok: "#2E9E5B", warn: "#E8A317", bad: "#D93B3B" };
+    const nivelPct = pct => pct >= 90 ? "ok" : pct >= 60 ? "warn" : "bad";
+    function frasco(pct, nivel, marcas) {
+      const p = Math.max(0, Math.min(100, pct));
+      const top = 10, alto = 52, y = top + alto * (1 - p / 100);
+      const color = COLORES_NIVEL[nivel];
+      const idClip = "frasco" + Math.random().toString(36).slice(2, 9);
+      const ola = p > 0 && p < 100 ? `<path d="M5 ${y} q4 -2.4 8 0 t8 0 t8 0 t8 0 V64 H5 Z" fill="${color}" opacity=".95"/>` : (p >= 100 ? `<rect x="5" y="${top}" width="32" height="${alto}" fill="${color}" opacity=".95"/>` : "");
+      const lineas = (marcas || []).map(mk => { const my = top + alto * (1 - mk.pct / 100);
+        return `<line x1="3" x2="39" y1="${my}" y2="${my}" stroke="#1F2A30" stroke-width=".8" stroke-dasharray="2 1.6"/><text x="41" y="${my + 2.6}" font-size="7" font-weight="700" fill="#5E6B73">${mk.txt}</text>`; }).join("");
+      return `<svg width="${marcas && marcas.length ? 58 : 44}" height="68" viewBox="0 0 ${marcas && marcas.length ? 58 : 44} 68" aria-hidden="true">
+        <defs><clipPath id="${idClip}"><rect x="5" y="${top}" width="32" height="${alto}" rx="7"/></clipPath></defs>
+        <rect x="14" y="2" width="14" height="7" rx="1.5" fill="#E6EBEE" stroke="#9AA5AC" stroke-width="1.2"/>
+        <rect x="5" y="${top}" width="32" height="${alto}" rx="7" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="1.4"/>
+        <g clip-path="url(#${idClip})">${ola}</g>
+        <rect x="5" y="${top}" width="32" height="${alto}" rx="7" fill="none" stroke="#9AA5AC" stroke-width="1.4"/>
+        <rect x="9" y="${top + 6}" width="3" height="${alto - 16}" rx="1.5" fill="#fff" opacity=".55"/>
+        ${lineas}
+      </svg>`;
+    }
 
     // Mediciones con variación vs. el reporte anterior (texto simple).
     const antMed = ctx.anterior ? ctx.anterior.mediciones || {} : {};
@@ -3756,7 +3785,18 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         const d = Math.round((v - a) * 100) / 100;
         varTxt = d === 0 ? "Sin cambio" : `${d > 0 ? "+" : "−"}${esUps ? fmtHM(d) + " h" : Math.abs(d) + " " + m.unidad}`;
       }
-      return `<td><div class="mv">${val}</div><div class="mk">${m.nombre}</div><div class="md">${varTxt === "—" ? "Sin dato anterior" : "Variación: " + varTxt}</div></td>`;
+      // Llenado del frasco: % para combustible; % de 2:30 h para la UPS;
+      // climatización en escala 10–35 °C con la franja correcta 18–27 marcada.
+      let pct, nivel, marcas = null;
+      if (m.id === "clima") {
+        pct = ((v - 10) / 25) * 100; nivel = nivelClima(v);
+        marcas = [{ pct: ((27 - 10) / 25) * 100, txt: "27°" }, { pct: ((18 - 10) / 25) * 100, txt: "18°" }];
+      } else if (esUps) { pct = (v / UPS_100_MIN) * 100; nivel = nivelPct(pct); }
+      else { pct = v; nivel = nivelPct(v); }
+      const pctTxt = esUps ? ` <small style="font-size:10px;font-weight:700;color:#5E6B73">(${Math.round(Math.min(100, pct))} %)</small>` : "";
+      return `<td><div class="mcel">${frasco(pct, nivel, marcas)}<div class="mtx">
+        <div class="mv" style="color:${COLORES_NIVEL[nivel]}">${val}${pctTxt}</div><div class="mk">${m.nombre}</div>
+        <div class="md">${varTxt === "—" ? "Sin dato anterior" : "Variación: " + varTxt}</div></div></div></td>`;
     }).join("");
 
     // Controles: conteo + solo las desviaciones.
@@ -3770,7 +3810,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
     const eventos = final.bitacora || [];
     const tablaEventos = eventos.length ? `<table><tr><th style="width:10%">Hora</th><th style="width:13%">Origen</th><th>Evento</th><th style="width:10%">Impacto</th><th style="width:13%">Estado</th></tr>${eventos.map(e => `
-      <tr><td>${e.tipo === "AGREGADO" ? esc(e.hora || "") : hhmm(e.en)}</td><td>${e.tipo === "AGREGADO" ? "Analista" : e.tipo.charAt(0) + e.tipo.slice(1).toLowerCase()}</td>
+      <tr><td>${e.tipo === "AGREGADO" ? esc(e.hora || "") : h24(e.en)}</td><td>${e.tipo === "AGREGADO" ? "Analista" : e.tipo.charAt(0) + e.tipo.slice(1).toLowerCase()}</td>
       <td>${esc(e.texto)}${e.detalle ? `<div class="sub">${esc(e.detalle)}</div>` : ""}</td><td>${IMP[e.impacto] || "—"}</td><td>${EST[e.estado] || "—"}</td></tr>`).join("")}</table>`
       : `<p class="vacio">No se registraron eventos en el período.</p>`;
 
@@ -3780,7 +3820,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       : `<p class="vacio">No se registraron comunicaciones ni escalamientos.</p>`;
 
     const tablaPend = ctx.pendientesAbiertos.length ? `<table><tr><th style="width:36%">Pendiente</th><th>Motivo</th><th style="width:20%">Origen</th><th style="width:18%">Desde</th></tr>${ctx.pendientesAbiertos.map(p => `
-      <tr><td>${esc(p.texto)}</td><td>${esc(p.motivo || "")}</td><td>${esc(p.origen)}</td><td>${fechaCorta(p.desde)}</td></tr>`).join("")}</table>`
+      <tr><td>${esc(p.texto)}</td><td>${esc(p.motivo || "")}</td><td>${esc(p.origen)}</td><td>${fecha24(p.desde)}</td></tr>`).join("")}</table>`
       : `<p class="ok">✔ No quedan pendientes abiertos.</p>`;
     const resueltos = ctx.pendientesResueltos.length
       ? `<p class="sub2"><b>Resueltos en este reporte:</b> ${ctx.pendientesResueltos.map(p => esc(p.texto)).join(" · ")}</p>` : "";
@@ -3816,7 +3856,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   tr { page-break-inside: avoid; }
   th { text-align: left; font-size: 8.8px; letter-spacing: .7px; text-transform: uppercase; color: #5E6B73; background: #F1F5F7; padding: 5px 7px; border-bottom: 1px solid #D7DEE3; }
   td { padding: 4px 7px; border-bottom: 1px solid #E6EBEE; vertical-align: top; }
-  .med td { width: 25%; text-align: center; border: 1px solid #E6EBEE; padding: 8px 6px; }
+  .med td { width: 25%; border: 1px solid #E6EBEE; padding: 8px 8px; vertical-align: middle; }
+  .mcel { display: flex; align-items: center; gap: 8px; }
+  .mcel svg { flex: 0 0 auto; }
+  .mtx { min-width: 0; }
   .mv { font-size: 17px; font-weight: 800; }
   .mk { font-size: 9px; font-weight: 800; letter-spacing: .7px; color: #5E6B73; text-transform: uppercase; }
   .md { font-size: 9.5px; color: #5E6B73; margin-top: 2px; }
@@ -3841,8 +3884,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div><span class="k">Jornada</span><span class="v">${esc(final.jornada)}</span></div>
       <div><span class="k">Fecha</span><span class="v">${fechaLarga(final.enviadoEn)}</span></div>
       <div class="ancho2"><span class="k">Analista</span><span class="v">${esc(final.usuario)}</span></div>
-      <div class="ancho2"><span class="k">Período reportado</span><span class="v">${hhmm(final.periodoDesde)} – ${hhmm(final.periodoHasta)} · ${duracion(new Date(final.periodoHasta) - new Date(final.periodoDesde))}</span></div>
-      <div class="ancho2"><span class="k">Reporte anterior</span><span class="v">${ctx.anterior ? `Reporte ${ctx.anterior.numero} · ${esc(ctx.anterior.usuario)} · ${hhmm(ctx.anterior.enviadoEn)}` : "Primero del turno"}</span></div>
+      <div class="ancho2"><span class="k">Período reportado</span><span class="v">${h24(final.periodoDesde)} – ${h24(final.periodoHasta)} · ${durCorta(new Date(final.periodoHasta) - new Date(final.periodoDesde))}</span></div>
+      <div class="ancho2"><span class="k">Reporte anterior</span><span class="v">${ctx.anterior ? `Reporte ${ctx.anterior.numero} · ${esc(ctx.anterior.usuario)} · ${h24(ctx.anterior.enviadoEn)}` : "Primero del turno"}</span></div>
     </div>
   </div>
 
@@ -3869,7 +3912,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
   ${final.recomendaciones ? `<div class="bloque"><h2>Recomendaciones para el siguiente corte</h2><p class="reco">${esc(final.recomendaciones)}</p></div>` : ""}
 
-  <div class="pie"><span>Generado por SiCheck · ${new Date(final.enviadoEn).toLocaleString("es-NI")}</span><span>${esc(final.usuario)} · Grupo ${final.grupo === "LN" ? "León" : "Managua"}</span></div>
+  <div class="pie"><span>Generado por SiCheck · ${fechaLarga(final.enviadoEn)} ${h24(final.enviadoEn)}</span><span>${esc(final.usuario)} · Grupo ${final.grupo === "LN" ? "León" : "Managua"}</span></div>
 </body></html>`;
   }
 
