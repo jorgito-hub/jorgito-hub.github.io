@@ -4501,28 +4501,6 @@ function generarInformePNG() {
   const fmt = (iso) => new Date(iso).toLocaleString("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const esc = (s) => { const d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; };
 
-  // ---------- 1) Checklists (los 3 Reportes) ----------
-  let bitacora = [];
-  try { bitacora = JSON.parse(localStorage.getItem(STORAGE_BITACORA_CHECKLIST) || "[]"); } catch (e) {}
-  const misEnvios = bitacora.filter(e => e.usuario === usuario && dentroDelTurno(e.fechaHoraEnvio));
-
-  const reportesInfo = [1, 2, 3].map(n => {
-    const envios = misEnvios.filter(e => e.numeroReporte === n).sort((a, b) => new Date(b.fechaHoraEnvio) - new Date(a.fechaHoraEnvio));
-    const envio = envios[0] || null;
-    const ventana = obtenerVentanaReporte(n, limites);
-    let puntualidad = "⚠️ No completado";
-    if (envio) {
-      if (ventana) {
-        // A tiempo = el reporte se ABRIÓ dentro de su ventana (una vez abierto
-        // no hay límite para llenarlo); registros viejos usan la hora de envío.
-        puntualidad = (new Date(envio.fechaHoraApertura || envio.fechaHoraEnvio).getTime() <= ventana.fin.getTime()) ? "✅ A tiempo" : "🕒 Tardío";
-      } else {
-        puntualidad = "✅ Completado";
-      }
-    }
-    return { numero: n, envio, ventana, puntualidad };
-  });
-
   // ---------- 2) Novedades / comentarios propios ----------
   let novedades = [];
   try { novedades = JSON.parse(localStorage.getItem("novedadesTI_v1") || "[]"); } catch (e) {}
@@ -4546,105 +4524,259 @@ function generarInformePNG() {
   });
   comentariosPropios.sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
 
-  // ---------- Construir el HTML del informe ----------
-  const colorPuntualidad = (p) =>
-    p.includes("A tiempo") || p.includes("Completado") ? "#00a843"
-    : p.includes("Tardío") ? "#ff8c00"
-    : "#e8003d";
+  // ============================================================
+  // 📊 CONSOLIDADO DEL TURNO: se arma con los Reportes de Monitoreo que
+  // ESTE analista envió en su turno (1, 2 y 3, o los que haya hecho),
+  // más su actividad en novedades y comentarios.
+  // ============================================================
+  const h24 = iso => { const d = new Date(iso); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+  const fecha24 = iso => { const d = new Date(iso); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${h24(iso)}`; };
+  const fechaCorta = iso => { const d = new Date(iso); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`; };
+  const COLOR = { ok: "#2E9E5B", warn: "#E8A317", bad: "#D93B3B" };
+  const nivelPct = p => p >= 90 ? "ok" : p >= 60 ? "warn" : "bad";
+  const nivelClima = t => (t < 18 || t > 27) ? "bad" : (t <= 19 || t >= 26) ? "warn" : "ok";
+  const fmtHM = min => { const t = Math.round(Math.abs(min)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
+  const SECCIONES_INF = [
+    ["Control de Acceso", ["2.2", "2.3", "2.5"]],
+    ["Control de Ambiente", ["3.1", "3.3", "3.4", "3.5"]],
+    ["Infraestructura Eléctrica", ["4.1", "4.2", "4.3"]],
+    ["Equipamiento Tecnológico", ["5.1", "5.2", "5.4"]],
+    ["Conectividad y Redes", ["6.1", "6.2", "6.4"]]
+  ];
+  const VALOR = { cumple: 100, parcial: 50, nocumple: 0 };
+  const ESTADO_TXT = { verde: "Sin novedad", amarillo: "Con incidencias menores", rojo: "Con incidencias críticas" };
+  const ESTADO_COL = { verde: "#2E9E5B", amarillo: "#B07A00", rojo: "#B3261E" };
+  const ESTADO_FONDO = { verde: "#EAF7EF", amarillo: "#FFF4D6", rojo: "#FDE7E7" };
+  const GRAVEDAD = { verde: 0, amarillo: 1, rojo: 2 };
 
-  const filasReportes = reportesInfo.map(r => {
-    const obsHTML = r.envio && r.envio.observaciones.length
-      ? `<ul style="margin:4px 0 0 16px; padding:0;">${r.envio.observaciones.map(o => `<li><strong>${esc(o.control)}:</strong> ${esc(o.texto)}</li>`).join("")}</ul>`
-      : `<span style="color:#888;">— sin observaciones —</span>`;
-    const resumenResultados = r.envio
-      ? (() => {
-          const vals = Object.values(r.envio.resultados);
-          const cumple = vals.filter(v => v.etiqueta === "Cumple").length;
-          const parcial = vals.filter(v => v.etiqueta === "Parcial").length;
-          const noCumple = vals.filter(v => v.etiqueta === "No cumple").length;
-          return `✅ ${cumple} Cumple &nbsp; ⚠️ ${parcial} Parcial &nbsp; ❌ ${noCumple} No cumple`;
-        })()
-      : "—";
-    return `
-      <tr>
-        <td style="text-align:center; font-weight:900; font-size:16px; color:#0b1f5c;">${r.numero}</td>
-        <td>${r.envio ? fmt(r.envio.fechaHoraEnvio) : "—"}</td>
-        <td><span class="chip" style="background:${colorPuntualidad(r.puntualidad)};">${r.puntualidad}</span></td>
-        <td>${resumenResultados}</td>
-        <td>${obsHTML}</td>
-      </tr>`;
+  let todosReportes = [];
+  try { todosReportes = JSON.parse(localStorage.getItem("reportesMonitoreoTI_v1") || "[]"); } catch (e) {}
+  const misReportes = todosReportes.filter(r => r.usuario === usuario && dentroDelTurno(r.enviadoEn))
+    .sort((a, b) => new Date(a.enviadoEn) - new Date(b.enviadoEn));
+
+  // Cumplimiento de cada reporte (último envío de cada número).
+  const porNumero = [1, 2, 3].map(n => {
+    const r = misReportes.filter(x => x.numero === n).pop() || null;
+    const ventana = obtenerVentanaReporte(n, limites);
+    let puntualidad = "No completado", nivel = "bad";
+    if (r) {
+      const aTiempo = !ventana || new Date(r.abiertoEn || r.enviadoEn) <= ventana.fin;
+      puntualidad = aTiempo ? "A tiempo" : "Tardío"; nivel = aTiempo ? "ok" : "warn";
+    }
+    return { n, r, puntualidad, nivel };
+  });
+  const hechos = porNumero.filter(x => x.r);
+  const reportesUsados = hechos.map(x => x.r);
+
+  // Estado global del turno = el peor estado reportado.
+  const peor = reportesUsados.reduce((acc, r) => (GRAVEDAD[r.estado] ?? -1) > (GRAVEDAD[acc] ?? -1) ? r.estado : acc, null);
+
+  // Seguridad TI consolidada (promedio de todos los controles de todos los reportes).
+  let nC = 0, nP = 0, nN = 0;
+  const porSeccion = SECCIONES_INF.map(([nombre, ids]) => {
+    const vals = [];
+    reportesUsados.forEach(r => ids.forEach(id => { const v = r.controles?.[id]?.valor; if (v in VALOR) vals.push(VALOR[v]); }));
+    return { nombre, pct: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null };
+  });
+  reportesUsados.forEach(r => Object.values(r.controles || {}).forEach(c => { if (c.valor === "cumple") nC++; else if (c.valor === "parcial") nP++; else if (c.valor === "nocumple") nN++; }));
+  const totalEval = nC + nP + nN;
+  const pctGlobal = totalEval ? (nC * 100 + nP * 50) / totalEval : null;
+
+  // Mediciones: valor al cierre (último reporte) y rango del turno.
+  const MEDS = [
+    { id: "clima", nombre: "Climatización", fmt: v => `${v} °C`, pct: v => ((v - 10) / 25) * 100, nivel: v => nivelClima(v), termo: true },
+    { id: "combPrincipal", nombre: "Combustible principal", fmt: v => `${v} %`, pct: v => v, nivel: v => nivelPct(v) },
+    { id: "combReserva", nombre: "Combustible reserva", fmt: v => `${v} %`, pct: v => v, nivel: v => nivelPct(v) },
+    { id: "autonomiaUpsMin", nombre: "Autonomía UPS", fmt: v => `${fmtHM(v)} h`, pct: v => (v / 150) * 100, nivel: v => nivelPct((v / 150) * 100) }
+  ];
+
+  // Pendientes del grupo abiertos al cierre y resueltos por el analista en el turno.
+  let pendientes = [];
+  try { pendientes = JSON.parse(localStorage.getItem("pendientesTI_v1") || "[]"); } catch (e) {}
+  const grupo = perfilDeUsuario(usuario);
+  const pendAbiertos = pendientes.filter(p => (p.grupo || "MG") === grupo && p.estado !== "resuelto");
+  const pendResueltos = pendientes.filter(p => p.resueltoPor === usuario && p.estado === "resuelto" && dentroDelTurno(p.actualizadoEn));
+  const comunicaciones = reportesUsados.flatMap(r => (r.comunicaciones || []).map(c => ({ ...c, reporte: r.numero })));
+
+  /* ---------- gráficos SVG (mismo estilo de frascos del reporte) ---------- */
+  let svgId = 0;
+  function frascoSVG(pct, nivel, ancho = 44, alto = 68) {
+    const p = Math.max(0, Math.min(100, pct)), id = "fi" + (svgId++);
+    const top = 10, h = 52, y = top + h * (1 - p / 100), col = COLOR[nivel];
+    const liquido = p <= 0 ? "" : p >= 100 ? `<rect x="5" y="${top}" width="32" height="${h}" fill="${col}"/>`
+      : `<path d="M5 ${y} q4 -2.4 8 0 t8 0 t8 0 t8 0 V64 H5 Z" fill="${col}"/>`;
+    return `<svg width="${ancho}" height="${alto}" viewBox="0 0 44 68">
+      <defs><clipPath id="${id}"><rect x="5" y="${top}" width="32" height="${h}" rx="7"/></clipPath></defs>
+      <rect x="14" y="2" width="14" height="7" rx="1.5" fill="#E6EBEE" stroke="#9AA5AC" stroke-width="1.2"/>
+      <rect x="5" y="${top}" width="32" height="${h}" rx="7" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="1.4"/>
+      <g clip-path="url(#${id})">${liquido}</g>
+      <rect x="5" y="${top}" width="32" height="${h}" rx="7" fill="none" stroke="#9AA5AC" stroke-width="1.4"/>
+      <rect x="9" y="${top + 6}" width="3" height="${h - 16}" rx="1.5" fill="#fff" opacity=".55"/></svg>`;
+  }
+  function termometroSVG(pct, nivel) {
+    const p = Math.max(0, Math.min(100, pct)), col = COLOR[nivel];
+    const t0 = 5, alto = 47, yCol = t0 + alto * (1 - p / 100);
+    const marca = (temp, txt) => { const my = t0 + alto * (1 - ((temp - 10) / 25)); return `<line x1="13" x2="29" y1="${my}" y2="${my}" stroke="#1F2A30" stroke-width=".9" stroke-dasharray="2 1.4"/><text x="31" y="${my + 2.6}" font-size="7" font-weight="700" fill="#5E6B73">${txt}</text>`; };
+    return `<svg width="50" height="68" viewBox="0 0 50 68">
+      <rect x="16" y="2" width="10" height="54" rx="5" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="1.3"/>
+      <circle cx="21" cy="58" r="8.5" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="1.3"/>
+      <rect x="18.5" y="${yCol}" width="5" height="${58 - yCol}" rx="2.5" fill="${col}"/>
+      <circle cx="21" cy="58" r="6.2" fill="${col}"/>
+      <rect x="19" y="6" width="1.6" height="40" rx=".8" fill="#fff" opacity=".6"/>
+      ${marca(27, "27°")}${marca(18, "18°")}</svg>`;
+  }
+  // Matraz redondo (reemplaza el gráfico de pastel): se llena con el
+  // cumplimiento global y muestra su porcentaje.
+  function matrazSVG(pct, nivel) {
+    const p = Math.max(0, Math.min(100, pct)), col = COLOR[nivel], id = "fm" + (svgId++);
+    const cy = 112, r = 74, topBola = cy - r, y = topBola + 2 * r * (1 - p / 100);
+    return `<svg width="190" height="200" viewBox="0 0 190 200">
+      <defs><clipPath id="${id}"><circle cx="95" cy="${cy}" r="${r}"/></clipPath></defs>
+      <rect x="76" y="6" width="38" height="12" rx="3" fill="#E6EBEE" stroke="#9AA5AC" stroke-width="2"/>
+      <rect x="80" y="16" width="30" height="${topBola - 16 + 8}" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="2"/>
+      <circle cx="95" cy="${cy}" r="${r}" fill="#F4F7F8" stroke="#9AA5AC" stroke-width="2.2"/>
+      <g clip-path="url(#${id})">${p > 0 ? `<path d="M15 ${y} q10 -6 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 V${cy + r + 4} H15 Z" fill="${col}"/>` : ""}</g>
+      <circle cx="95" cy="${cy}" r="${r}" fill="none" stroke="#9AA5AC" stroke-width="2.2"/>
+      <path d="M45 ${cy - 36} a64 64 0 0 1 22 -24" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none" opacity=".6"/>
+      <text x="95" y="${cy + 12}" text-anchor="middle" font-size="36" font-weight="900" fill="#1F2A30" stroke="#fff" stroke-width="5" paint-order="stroke">${Math.round(p)}%</text></svg>`;
+  }
+
+  /* ---------- secciones del informe ---------- */
+  const filasCumplimiento = porNumero.map(x => `
+    <tr><td class="c"><b>${x.n}</b></td>
+      <td>${x.r ? h24(x.r.abiertoEn) : "—"}</td><td>${x.r ? h24(x.r.enviadoEn) : "—"}</td>
+      <td><span class="chip" style="background:${COLOR[x.nivel]}">${x.puntualidad}</span></td>
+      <td>${x.r ? `<span class="est" style="color:${ESTADO_COL[x.r.estado]}">● ${ESTADO_TXT[x.r.estado] || "—"}</span>` : "—"}</td>
+      <td>${x.r ? esc(x.r.resumen) : `<span class="vacio">No se completó este reporte.</span>`}</td></tr>`).join("");
+
+  const tarjetasSeccion = porSeccion.map(s => s.pct == null
+    ? `<div class="sec-card"><div class="sec-sin">Sin datos</div><div class="sec-nom">${s.nombre}</div></div>`
+    : `<div class="sec-card">${frascoSVG(s.pct, nivelPct(s.pct))}<div class="sec-pct" style="color:${COLOR[nivelPct(s.pct)]}">${Math.round(s.pct)}%</div><div class="sec-nom">${s.nombre}</div></div>`).join("");
+
+  const tarjetasMed = MEDS.map(m => {
+    const vals = reportesUsados.map(r => parseFloat(r.mediciones?.[m.id])).filter(v => !isNaN(v));
+    if (!vals.length) return `<div class="med-card"><div class="sec-sin">Sin datos</div><div class="sec-nom">${m.nombre}</div></div>`;
+    const ultimo = vals[vals.length - 1], nivel = m.nivel(ultimo);
+    const minimo = Math.min(...vals), maximo = Math.max(...vals);
+    return `<div class="med-card">${m.termo ? termometroSVG(m.pct(ultimo), nivel) : frascoSVG(m.pct(ultimo), nivel)}
+      <div><div class="med-v" style="color:${COLOR[nivel]}">${m.fmt(ultimo)}</div><div class="sec-nom" style="text-align:left">${m.nombre}</div>
+      <div class="med-r">${vals.length < 2 ? "Un solo registro" : minimo === maximo ? "Sin cambios en el turno" : `Turno: ${m.fmt(minimo)} – ${m.fmt(maximo)}`}</div>
+      <div class="med-r">${vals.map(m.fmt).join(" → ")}</div></div></div>`;
   }).join("");
 
-  const filasNovedades = novedadesPropias.length
-    ? novedadesPropias.map(nv => `
-      <tr>
-        <td>${fmt(nv.fechaHora)}</td>
-        <td><strong>${esc(nv.titulo)}</strong></td>
-        <td style="text-align:center;"><span class="chip" style="background:${COLORES_CALIF[nv.calificacion] || "#607d8b"};">${NOMBRES_CALIF[nv.calificacion] || nv.calificacion}</span></td>
-        <td>${esc(nv.descripcion)}</td>
-      </tr>`).join("")
-    : `<tr><td colspan="4" class="vacio">No publicó novedades en este turno.</td></tr>`;
+  const filasPend = pendAbiertos.length ? pendAbiertos.map(p => `
+    <tr><td>${esc(p.texto)}</td><td>${esc(p.motivo || "")}</td><td>${esc(p.origen)}</td><td>${fecha24(p.desde)}</td></tr>`).join("")
+    : `<tr><td colspan="4" class="vacio ok">✔ No quedan pendientes abiertos al cierre del turno.</td></tr>`;
 
+  const filasComs = comunicaciones.map(c => `<tr><td>R${c.reporte} · ${esc(c.hora)}</td><td>${esc(c.a)}</td><td>${esc(c.medio)}</td><td>${esc(c.motivo)}</td><td>${esc(c.ticket) || "—"}</td></tr>`).join("");
+
+  const filasNovedades = novedadesPropias.length
+    ? novedadesPropias.map(nv => `<tr><td>${h24(nv.fechaHora)}</td><td><b>${esc(nv.titulo)}</b></td>
+        <td class="c"><span class="chip" style="background:${COLORES_CALIF[nv.calificacion] || "#607d8b"}">${NOMBRES_CALIF[nv.calificacion] || nv.calificacion}</span></td><td>${esc(nv.descripcion)}</td></tr>`).join("")
+    : `<tr><td colspan="4" class="vacio">No publicó novedades en este turno.</td></tr>`;
   const filasComentarios = comentariosPropios.length
-    ? comentariosPropios.map(c => `
-      <tr>
-        <td>${fmt(c.fechaHora)}</td>
-        <td><strong>${esc(c.novedad)}</strong>${c.esPropia ? ' <span style="color:#888;">(propia)</span>' : ""}</td>
-        <td>${esc(c.texto)}</td>
-      </tr>`).join("")
+    ? comentariosPropios.map(c => `<tr><td>${h24(c.fechaHora)}</td><td><b>${esc(c.novedad)}</b>${c.esPropia ? ' <span class="vacio">(propia)</span>' : ""}</td><td>${esc(c.texto)}</td></tr>`).join("")
     : `<tr><td colspan="3" class="vacio">No escribió comentarios en este turno.</td></tr>`;
 
   const contenido = `
     <style>
-      #informePNGCaptura { font-family: Arial, sans-serif; color: #1a1a1a; background: #ffffff; width: 1100px; padding: 0 0 28px 0; box-sizing: border-box; }
+      #informePNGCaptura { font-family: "Segoe UI", Arial, sans-serif; color: #1F2A30; background: #fff; width: 1100px; padding: 0 0 26px; box-sizing: border-box; }
       #informePNGCaptura * { box-sizing: border-box; }
-      #informePNGCaptura .encabezado { background: #0047ff; color: #fff; padding: 26px 32px; margin: 0; }
-      #informePNGCaptura .encabezado h1 { font-size: 30px; font-weight: 900; margin: 0 0 6px 0; padding: 0; color: #fff; background: none; }
-      #informePNGCaptura .encabezado .subtitulo { font-size: 15px; line-height: 1.5; margin: 0; padding: 0; color: #fff; }
-      #informePNGCaptura .cuerpo { padding: 0 32px; }
-      #informePNGCaptura h2 { font-size: 18px; font-weight: 900; color: #fff; background: #0047ff; border-radius: 8px; padding: 9px 14px; margin: 26px 0 10px 0; }
-      #informePNGCaptura table { width: 100%; border-collapse: collapse; margin: 8px 0 0 0; }
-      #informePNGCaptura th, #informePNGCaptura td { border: 1px solid #d0d7e2; padding: 8px 9px; font-size: 13.5px; text-align: left; vertical-align: top; }
-      #informePNGCaptura th { background: #0b1f5c; color: #fff; font-weight: 800; }
-      #informePNGCaptura tr:nth-child(even) td { background: #f5f7fb; }
-      #informePNGCaptura .vacio { text-align: center; color: #888; font-style: italic; }
-      #informePNGCaptura .chip { display: inline-block; color: #fff; font-weight: 800; font-size: 12px; padding: 3px 9px; border-radius: 12px; margin: 1px 2px; white-space: nowrap; }
-      #informePNGCaptura .resumen-caja { display: flex; gap: 10px; flex-wrap: nowrap; margin: 10px 0 0 0; padding: 0; }
-      #informePNGCaptura .resumen-item { flex: 1 1 0; min-width: 0; color: #fff; border-radius: 10px; padding: 12px 12px; box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
-      #informePNGCaptura .resumen-item .numero { font-size: 28px; font-weight: 900; margin: 0; padding: 0; }
-      #informePNGCaptura .resumen-item .etiqueta { font-size: 12.5px; font-weight: 700; margin: 0; padding: 0; }
-      #informePNGCaptura .pie { margin: 22px 32px 0 32px; padding: 0; font-size: 11.5px; color: #777; text-align: right; }
+      #informePNGCaptura .enc { display: grid; grid-template-columns: 1.15fr 2fr; margin: 24px 28px 0; border: 2px solid #00949F; border-radius: 8px; overflow: hidden; }
+      #informePNGCaptura .enc-izq { background: #00949F; color: #fff; padding: 16px 20px; }
+      #informePNGCaptura .enc-izq .org { font-size: 12px; letter-spacing: 2px; opacity: .9; }
+      #informePNGCaptura .enc-izq h1 { margin: 4px 0 2px; font-size: 28px; color: #fff; background: none; padding: 0; }
+      #informePNGCaptura .enc-izq .num { font-size: 14px; font-weight: 700; }
+      #informePNGCaptura .enc-der { display: grid; grid-template-columns: repeat(3, 1fr); }
+      #informePNGCaptura .enc-der div { padding: 10px 14px; border-left: 1px solid #D7DEE3; border-bottom: 1px solid #D7DEE3; }
+      #informePNGCaptura .enc-der div:nth-last-child(-n+3) { border-bottom: none; }
+      #informePNGCaptura .k { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: 1px; color: #5E6B73; text-transform: uppercase; }
+      #informePNGCaptura .v { font-size: 15px; font-weight: 700; }
+      #informePNGCaptura .cuerpo { padding: 0 28px; }
+      #informePNGCaptura .estado { margin-top: 14px; border-left: 6px solid; padding: 12px 16px; border-radius: 6px; font-size: 14px; }
+      #informePNGCaptura .estado .t { font-weight: 800; font-size: 15px; text-transform: uppercase; letter-spacing: .6px; }
+      #informePNGCaptura h2 { font-size: 15px; color: #007A83; text-transform: uppercase; letter-spacing: 1px; margin: 22px 0 8px; padding: 0 0 4px; border-bottom: 2px solid #00949F; background: none; border-radius: 0; }
+      #informePNGCaptura table { width: 100%; border-collapse: collapse; }
+      #informePNGCaptura th { text-align: left; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: #5E6B73; background: #F1F5F7; padding: 7px 9px; border-bottom: 1px solid #D7DEE3; }
+      #informePNGCaptura td { padding: 7px 9px; border-bottom: 1px solid #E6EBEE; font-size: 13.5px; vertical-align: top; }
+      #informePNGCaptura .c { text-align: center; }
+      #informePNGCaptura .vacio { color: #5E6B73; font-style: italic; }
+      #informePNGCaptura .ok { color: #1E6B3E; font-style: normal; font-weight: 700; }
+      #informePNGCaptura .chip { display: inline-block; color: #fff; font-weight: 800; font-size: 12px; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+      #informePNGCaptura .est { font-weight: 800; font-size: 12.5px; white-space: nowrap; }
+      #informePNGCaptura .seg { display: grid; grid-template-columns: 250px 1fr; gap: 18px; align-items: center; }
+      #informePNGCaptura .global { text-align: center; border: 1px solid #E6EBEE; border-radius: 10px; padding: 10px; }
+      #informePNGCaptura .global .tit { font-size: 11.5px; font-weight: 800; letter-spacing: 1px; color: #5E6B73; text-transform: uppercase; }
+      #informePNGCaptura .leyenda { display: flex; justify-content: center; gap: 12px; font-size: 12.5px; font-weight: 700; margin-top: 4px; }
+      #informePNGCaptura .secs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+      #informePNGCaptura .sec-card, #informePNGCaptura .med-card { border: 1px solid #E6EBEE; border-radius: 10px; padding: 12px 8px; text-align: center; }
+      #informePNGCaptura .sec-pct { font-size: 22px; font-weight: 900; margin-top: 4px; }
+      #informePNGCaptura .sec-nom { font-size: 11px; font-weight: 800; letter-spacing: .6px; color: #5E6B73; text-transform: uppercase; }
+      #informePNGCaptura .sec-sin { font-size: 13px; color: #9AA5AC; font-style: italic; padding: 26px 0; }
+      #informePNGCaptura .meds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+      #informePNGCaptura .med-card { display: flex; gap: 10px; align-items: center; text-align: left; }
+      #informePNGCaptura .med-v { font-size: 21px; font-weight: 900; }
+      #informePNGCaptura .med-r { font-size: 11.5px; color: #5E6B73; }
+      #informePNGCaptura .kpis { display: flex; gap: 10px; margin-bottom: 10px; }
+      #informePNGCaptura .kpi { flex: 1; border-radius: 10px; padding: 10px 14px; font-weight: 800; font-size: 13px; }
+      #informePNGCaptura .kpi b { font-size: 26px; margin-right: 6px; }
+      #informePNGCaptura .firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin: 46px 60px 0; text-align: center; font-size: 13.5px; }
+      #informePNGCaptura .firmas .linea { border-top: 1.5px solid #1F2A30; padding-top: 6px; }
+      #informePNGCaptura .pie { margin: 22px 28px 0; padding-top: 8px; border-top: 1px solid #D7DEE3; font-size: 11.5px; color: #5E6B73; display: flex; justify-content: space-between; }
     </style>
-    <div class="encabezado">
-      <h1>📄 Informe de Turno</h1>
-      <div class="subtitulo">
-        <strong>${esc(usuario)}</strong> &nbsp;|&nbsp; Jornada N° ${esc(jornada)} &nbsp;|&nbsp; Turno ${esc(turnoTexto)}<br>
-        ${fmt(limites.inicio.toISOString())} – ${fmt(limites.fin.toISOString())}
+    <div class="enc">
+      <div class="enc-izq">
+        <div class="org">SICHECK · MONITOREO TI</div>
+        <h1>Informe de Turno</h1>
+        <div class="num">Consolidado de ${hechos.length} de 3 reportes · Turno ${esc(turnoTexto)}</div>
+      </div>
+      <div class="enc-der">
+        <div><span class="k">Jornada</span><span class="v">${esc(jornada)}</span></div>
+        <div><span class="k">Fecha</span><span class="v">${fechaCorta(limites.inicio.toISOString())}</span></div>
+        <div><span class="k">Analista</span><span class="v">${esc(usuario)}</span></div>
+        <div><span class="k">Turno</span><span class="v">${h24(limites.inicio.toISOString())} – ${h24(limites.fin.toISOString())}</span></div>
+        <div><span class="k">Reportes completados</span><span class="v" style="color:${hechos.length === 3 ? COLOR.ok : COLOR.bad}">${hechos.length} de 3</span></div>
+        <div><span class="k">Grupo</span><span class="v">${grupo === "LN" ? "León" : "Managua"}</span></div>
       </div>
     </div>
     <div class="cuerpo">
-      <h2>1. Checklists (Reportes del turno)</h2>
-      <table>
-        <tr><th>N°</th><th>Hora de envío</th><th>Puntualidad</th><th>Resultados</th><th>Observaciones</th></tr>
-        ${filasReportes}
-      </table>
+      ${peor ? `<div class="estado" style="border-color:${ESTADO_COL[peor]};background:${ESTADO_FONDO[peor]}">
+          <div class="t" style="color:${ESTADO_COL[peor]}">● Estado del turno: ${ESTADO_TXT[peor]}</div>
+          ${hechos.length < 3 ? `<div style="margin-top:4px"><b>Atención:</b> ${3 - hechos.length === 1 ? "falta 1 reporte" : `faltan ${3 - hechos.length} reportes`} por completar en este turno.</div>` : ""}</div>`
+        : `<div class="estado" style="border-color:${COLOR.bad};background:#FDE7E7"><div class="t" style="color:#B3261E">● No se completó ningún reporte en este turno</div></div>`}
 
-      <h2>2. Novedades publicadas</h2>
-      <div class="resumen-caja">
-        ${Object.entries(desgloseCalif).map(([k, v]) => `<div class="resumen-item" style="background:${COLORES_CALIF[k]};"><div class="numero">${v}</div><div class="etiqueta">${NOMBRES_CALIF[k]}</div></div>`).join("")}
+      <h2>1. Reportes del turno</h2>
+      <table><tr><th style="width:40px">N°</th><th style="width:70px">Abierto</th><th style="width:70px">Enviado</th><th style="width:120px">Puntualidad</th><th style="width:210px">Estado</th><th>Resumen</th></tr>${filasCumplimiento}</table>
+
+      <h2>2. Seguridad TI consolidada</h2>
+      ${totalEval ? `<div class="seg">
+        <div class="global"><div class="tit">Cumplimiento global</div>${matrazSVG(pctGlobal, nivelPct(pctGlobal))}
+          <div class="leyenda"><span style="color:${COLOR.ok}">● ${nC} cumple</span><span style="color:${COLOR.warn}">● ${nP} parcial</span><span style="color:${COLOR.bad}">● ${nN} no cumple</span></div></div>
+        <div class="secs">${tarjetasSeccion}</div></div>`
+        : `<p class="vacio">Sin reportes completados: no hay datos de controles.</p>`}
+
+      <h2>3. Mediciones del turno</h2>
+      ${reportesUsados.length ? `<div class="meds">${tarjetasMed}</div>` : `<p class="vacio">Sin mediciones registradas.</p>`}
+
+      <h2>4. Pendientes y escalamientos</h2>
+      <div class="kpis">
+        <div class="kpi" style="background:#FDE7E7;color:#B3261E"><b>${pendAbiertos.length}</b>pendiente${pendAbiertos.length === 1 ? "" : "s"} abierto${pendAbiertos.length === 1 ? "" : "s"} al cierre</div>
+        <div class="kpi" style="background:#E7F5EC;color:#1E6B3E"><b>${pendResueltos.length}</b>resuelto${pendResueltos.length === 1 ? "" : "s"} en el turno</div>
+        <div class="kpi" style="background:#E8F1FB;color:#0D47A1"><b>${comunicaciones.length}</b>${comunicaciones.length === 1 ? "comunicación" : "comunicaciones"} / escalamiento${comunicaciones.length === 1 ? "" : "s"}</div>
       </div>
-      <table style="margin-top:14px;">
-        <tr><th>Hora</th><th>Título</th><th>Calificación</th><th>Descripción</th></tr>
-        ${filasNovedades}
-      </table>
+      <table><tr><th>Pendiente</th><th>Motivo</th><th style="width:200px">Origen</th><th style="width:110px">Desde</th></tr>${filasPend}</table>
+      ${comunicaciones.length ? `<table style="margin-top:10px"><tr><th style="width:110px">Reporte · hora</th><th style="width:220px">Notificado a</th><th style="width:110px">Medio</th><th>Motivo</th><th style="width:100px">Ticket</th></tr>${filasComs}</table>` : ""}
 
-      <h2>3. Seguimiento que dio (comentarios)</h2>
-      <table>
-        <tr><th>Hora</th><th>Novedad</th><th>Comentario</th></tr>
-        ${filasComentarios}
-      </table>
+      <h2>5. Actividad del analista</h2>
+      <table><tr><th style="width:70px">Hora</th><th style="width:260px">Novedad publicada</th><th style="width:130px" class="c">Calificación</th><th>Descripción</th></tr>${filasNovedades}</table>
+      <table style="margin-top:10px"><tr><th style="width:70px">Hora</th><th style="width:300px">Seguimiento en la novedad</th><th>Comentario</th></tr>${filasComentarios}</table>
+
+      <div class="firmas">
+        <div class="linea"><b>${esc(usuario)}</b><br>Analista de Monitoreo TI</div>
+        <div class="linea"><b>Jorge Quintana</b><br>Jefe de Monitoreo TI</div>
+      </div>
     </div>
-    <div class="pie">Generado: ${fmt(new Date().toISOString())}</div>
+    <div class="pie"><span>Generado por SiCheck · ${fechaCorta(new Date().toISOString())} ${h24(new Date().toISOString())}</span><span>${esc(usuario)} · Jornada ${esc(jornada)} · Turno ${esc(turnoTexto)}</span></div>
   `;
 
   // 🖼️ Antes se abría una ventana nueva con document.write + print(): el
