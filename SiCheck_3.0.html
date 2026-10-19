@@ -2286,6 +2286,8 @@ canvas[id^="firma"] {
 .rpt-m-val{display:flex;align-items:baseline;gap:6px;margin-top:6px}
 .rpt .rpt-m-val input{width:110px;font-size:26px;font-weight:900;border:1.5px solid var(--b);border-radius:8px;padding:2px 8px;margin:0;font-family:inherit;color:var(--tx)}
 .rpt-m-val span{font-size:15px;color:var(--g);font-weight:700}
+.rpt .rpt-m-val input.rpt-hm{letter-spacing:1px;text-align:center}
+.rpt .rpt-m-val input.rpt-hm-error{border-color:var(--bad);color:var(--bad)}
 .rpt-tr{font-size:12px;font-weight:700;margin-top:6px;min-height:16px}
 .rpt-tr.up{color:var(--warn)}.rpt-tr.down{color:var(--bad)}.rpt-tr.eq{color:var(--ok)}.rpt-tr.na{color:var(--g);font-weight:600}
 .rpt-bar{height:6px;background:#EEF1F3;border-radius:4px;margin-top:8px;overflow:hidden}.rpt-bar i{display:block;height:100%;border-radius:4px;transition:width .3s}
@@ -2308,6 +2310,10 @@ canvas[id^="firma"] {
 .rpt-f .l{font-size:10px;font-weight:800;color:#8A6100;letter-spacing:.6px;display:block;margin-bottom:2px}
 .rpt .rpt-f input{width:100%;border:none;padding:2px 0;font-size:13px;font-family:inherit;margin:0;background:transparent;color:var(--tx)}
 .rpt .rpt-f input:focus{outline:none}
+/* Etiquetas de Pendientes: Parcial (amarillo pastel / dorado) y No cumple (rojo pastel / vino) */
+.rpt-et{display:inline-block;margin-left:6px;font-size:11px;font-weight:800;padding:2px 9px;border-radius:8px;white-space:nowrap}
+.rpt-et-parcial{background:#FFF4C2;color:#B8860B}
+.rpt-et-nocumple{background:#FADBD8;color:#7B1E1E}
 .rpt-arr-pen{background:#E6F4F5 !important;color:#007A83 !important}
 .rpt-arr{background:#FFF3D6;color:#7A5300;font-size:11px;font-weight:800;padding:2px 8px;border-radius:8px;margin-left:8px;white-space:nowrap}
 .rpt-colapsado{font-size:12.5px;color:var(--ok);font-weight:700;padding:9px 14px;border-top:1px solid #EEF1F3;cursor:pointer}
@@ -3279,13 +3285,19 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     { id: "clima",         icono: "🌡️", nombre: "Climatización",         unidad: "°C" },
     { id: "combPrincipal", icono: "⛽", nombre: "Combustible principal", unidad: "%" },
     { id: "combReserva",   icono: "⛽", nombre: "Combustible reserva",   unidad: "%" },
-    { id: "autonomiaUpsHoras", icono: "🔋", nombre: "Autonomía UPS",     unidad: "h" }
+    { id: "autonomiaUpsMin", icono: "🔋", nombre: "Autonomía UPS",       unidad: "h:min" }
   ];
   const IMPACTOS = [["bajo", "Bajo"], ["medio", "Medio"], ["alto", "Alto"], ["na", "—"]];
   const ESTADOS_EV = [["abierto", "Abierto"], ["proceso", "En proceso"], ["observacion", "En observación"], ["resuelto", "Resuelto"], ["registrado", "Registrado"]];
   const MEDIOS = ["Teléfono", "WhatsApp", "Correo", "Presencial"];
 
   let rpt = null; // reporte en edición
+
+  // 🔋 Autonomía UPS: se guarda en minutos y se muestra como H:MM.
+  const UPS_100_MIN = 150; // 2 h 30 min = 100 % de la barra
+  const fmtHM = min => { const t = Math.round(Math.abs(min)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
+  // Colores de barra por porcentaje (combustible y UPS): 90–100 verde, 60–89 amarillo, 0–59 rojo.
+  const colorPorcentaje = pct => pct >= 90 ? "var(--ok)" : pct >= 60 ? "var(--warn)" : "var(--bad)";
 
   /* ---------- utilidades ---------- */
   const esc = s => { const d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; };
@@ -3491,19 +3503,22 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     let ancho = 0, color = "var(--ok)";
     if (!isNaN(v)) {
       if (id === "clima") { ancho = Math.min(100, Math.max(0, (v / 35) * 100)); color = (v >= 18 && v <= 27) ? "var(--ok)" : "var(--bad)"; if (v > 25 && v <= 27) color = "var(--warn)"; }
-      else if (id === "autonomiaUpsHoras") { ancho = Math.min(100, (v / 2) * 100); color = v >= 0.5 ? "var(--ok)" : v >= 0.25 ? "var(--warn)" : "var(--bad)"; }
-      else { ancho = Math.min(100, Math.max(0, v)); color = v >= 50 ? "var(--ok)" : v >= 25 ? "var(--warn)" : "var(--bad)"; }
+      else if (id === "autonomiaUpsMin") { const pct = (v / UPS_100_MIN) * 100; ancho = Math.min(100, Math.max(0, pct)); color = colorPorcentaje(pct); }
+      else { ancho = Math.min(100, Math.max(0, v)); color = colorPorcentaje(v); }
     }
+    const esUps = id === "autonomiaUpsMin";
+    const mostrar = x => esUps ? `${fmtHM(x)} h` : `${x} ${def.unidad}`;
     let tr = { cls: "na", txt: !rpt.anterior ? "Primer registro del turno"
       : isNaN(ant) ? "Sin dato en el reporte anterior"
-      : `Anterior: ${ant} ${def.unidad} (${hhmm(rpt.anterior.enviadoEn)})` };
+      : `Anterior: ${mostrar(ant)} (${hhmm(rpt.anterior.enviadoEn)})` };
     if (!isNaN(v) && !isNaN(ant)) {
       const d = Math.round((v - ant) * 100) / 100;
-      const ref = `${ant} ${def.unidad} (${hhmm(rpt.anterior.enviadoEn)})`;
+      const ref = `${mostrar(ant)} (${hhmm(rpt.anterior.enviadoEn)})`;
       if (d === 0) tr = { cls: "eq", txt: `= sin cambio vs. ${ref}` };
       else {
         const empeora = id === "clima" ? d > 0 : d < 0;
-        tr = { cls: empeora ? (id === "clima" ? "up" : "down") : "eq", txt: `${d > 0 ? "▲ +" : "▼ "}${d} ${def.unidad} vs. ${ref}` };
+        const dTxt = esUps ? `${fmtHM(d)} h` : `${Math.abs(d)} ${def.unidad}`;
+        tr = { cls: empeora ? (id === "clima" ? "up" : "down") : "eq", txt: `${d > 0 ? "▲ +" : "▼ −"}${dTxt} vs. ${ref}` };
       }
     }
     return { ancho, color, tr };
@@ -3515,10 +3530,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       const inf = infoMedicion(m.id, val);
       return `<div class="rpt-m">
         <span class="rpt-k">${m.icono} ${m.nombre}</span>
-        <div class="rpt-m-val"><input type="number" step="any" inputmode="decimal" value="${esc(val)}" placeholder="--" oninput="RPT.medicion('${m.id}', this.value)"><span>${m.unidad}</span></div>
+        <div class="rpt-m-val">${m.id === "autonomiaUpsMin"
+          ? `<input type="text" inputmode="numeric" class="rpt-hm" maxlength="5" placeholder="0:00" title="Horas:minutos (máx. referencia 2:30)" value="${val === "" || isNaN(parseFloat(val)) ? "" : fmtHM(parseFloat(val))}" oninput="RPT.medicionHM(this)"><span>h : min</span>`
+          : `<input type="number" step="any" inputmode="decimal" value="${esc(val)}" placeholder="--" oninput="RPT.medicion('${m.id}', this.value)"><span>${m.unidad}</span>`}</div>
         <div class="rpt-tr ${inf.tr.cls}" id="rptTr_${m.id}">${inf.tr.txt}</div>
         <div class="rpt-bar"><i id="rptBar_${m.id}" style="width:${inf.ancho}%;background:${inf.color}"></i></div>
         ${m.id === "clima" ? `<div class="rpt-tr na">Rango aceptable 18–27 °C</div>` : ""}
+        ${m.id === "autonomiaUpsMin" ? `<div class="rpt-tr na">100 % = 2:30 h</div>` : ""}
       </div>`;
     }).join("");
     document.getElementById("rptSecMediciones").innerHTML = `
@@ -3598,7 +3616,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   function renderPendientes() {
     const filas = pendientesActuales().map(f => `
       <div class="rpt-tab rpt-pen">
-        <span><b>${esc(f.id)}</b> ${esc(f.nombre)}${f.valor ? ` <span class="rpt-arr" style="margin-left:4px">${ETIQUETA[f.valor]}</span>` : ""}</span>
+        <span><b>${esc(f.id)}</b> ${esc(f.nombre)}${f.valor ? ` <span class="rpt-et rpt-et-${f.valor}">${ETIQUETA[f.valor]}</span>` : ""}</span>
         ${f.editable
           ? `<input class="rpt-in" type="text" placeholder="¿Por qué? ¿Qué se hizo? (obligatorio)" value="${esc(f.motivo)}" oninput="RPT.motivo('${f.id}', this.value)">`
           : `<span style="color:var(--g)">${esc(f.motivo) || "—"}<small style="display:block;font-size:11px">Evalúa el control ${esc(f.id)} en la sección 5</small></span>`}
@@ -3674,6 +3692,20 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       if (tr) { tr.className = "rpt-tr " + inf.tr.cls; tr.textContent = inf.tr.txt; }
       if (bar) { bar.style.width = inf.ancho + "%"; bar.style.background = inf.color; }
     },
+    // Un solo campo H:MM: se escriben solo dígitos y se acomodan solos
+    // (2 → 0:02, 23 → 0:23, 230 → 2:30, 1015 → 10:15).
+    medicionHM(input) {
+      const dig = input.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 4);
+      let minutos = "";
+      if (dig) {
+        const h = parseInt(dig.slice(0, -2) || "0", 10), m = parseInt(dig.slice(-2), 10);
+        input.value = `${h}:${String(m).padStart(2, "0")}`;
+        minutos = m > 59 ? "invalido" : h * 60 + m;
+        input.classList.toggle("rpt-hm-error", m > 59);
+      } else { input.value = ""; input.classList.remove("rpt-hm-error"); }
+      input.setSelectionRange(input.value.length, input.value.length);
+      RPT.medicion("autonomiaUpsMin", minutos === "" ? "" : String(minutos));
+    },
     control(id, v) {
       const previo = rpt.controles[id] || {};
       const nuevo = { ...previo, valor: v };
@@ -3720,6 +3752,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     if (rpt.estado !== "verde" && (!rpt.resumen.trim() || rpt.resumen.trim() === RESUMEN_SIN_NOVEDAD))
       return fallo("rptSecEstado", "Escribe el resumen del período: es obligatorio cuando hay incidencias.");
     if (rpt.bitacora.some(e => e.tipo === "AGREGADO" && !e.texto.trim())) return fallo("rptSecBitacora", "Describe el evento agregado o quítalo de la bitácora.");
+    if (rpt.mediciones.autonomiaUpsMin === "invalido") return fallo("rptSecMediciones", "La autonomía UPS tiene minutos inválidos: deben ser de 00 a 59.");
     for (const m of MEDICIONES) {
       if (rpt.mediciones[m.id] === undefined || rpt.mediciones[m.id] === "" || isNaN(parseFloat(rpt.mediciones[m.id])))
         return fallo("rptSecMediciones", `Ingresa la medición de ${m.nombre}.`);
