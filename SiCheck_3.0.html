@@ -4114,6 +4114,28 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const vista = document.getElementById("VistaCheck");
     if (rpt && vista && vista.style.display === "block") renderPeriodo();
   }, 30000);
+
+  /* ---------- 🩺 Diagnóstico: si algo falla, se avisa en pantalla ----------
+     Antes, un error dejaba el formulario "congelado" sin explicación (los
+     botones no respondían y Guardar no hacía nada). Ahora se muestra qué
+     falló, para poder corregirlo. */
+  let ultimoAviso = 0;
+  function avisarError(donde, e) {
+    console.error(`Error en el reporte (${donde}):`, e);
+    if (Date.now() - ultimoAviso < 3000) return; // sin cascada de avisos
+    ultimoAviso = Date.now();
+    const lleno = e && (e.name === "QuotaExceededError" || /quota/i.test(e.message || ""));
+    const lugar = ((e && e.stack) || "").split("\n").slice(1, 3).map(l => l.trim()).join(" | ");
+    alert(lleno
+      ? "⚠️ El almacenamiento del navegador está lleno y no se pudo guardar el reporte.\n\nToma una captura de este mensaje y envíasela a Jorge Quintana."
+      : `⚠️ Ocurrió un error en el reporte (${donde}):\n${e && e.name}: ${e && e.message}\n${lugar}\n\nToma una captura de este mensaje y envíasela a Jorge Quintana.`);
+  }
+  const envolver = (donde, fn) => function (...args) {
+    try { return fn.apply(this, args); } catch (e) { avisarError(donde, e); }
+  };
+  Object.keys(window.RPT).forEach(k => { window.RPT[k] = envolver(k, window.RPT[k]); });
+  window.guardarReporteMonitoreo = envolver("guardar", window.guardarReporteMonitoreo);
+  window.abrirReporteMonitoreo = envolver("abrir", window.abrirReporteMonitoreo);
 })();
 </script>
 
