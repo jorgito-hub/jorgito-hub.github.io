@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sorteo 2026 | Fechas especiales UMOI</title>
+<style>
+:root{--navy:#10243a;--blue:#1f4e78;--teal:#10a6a0;--gold:#e8b75a;--ink:#182638;--muted:#68778a;--bg:#edf2f8;--card:#fff;--line:#dce5ef;--green:#18794e;--shadow:0 18px 48px rgba(16,36,58,.09)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 12% 0%,#dcecf4 0,transparent 32%),radial-gradient(ellipse at 95% 12%,#e2e8fa 0,transparent 30%),var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,Arial,sans-serif;font-size:14px}
+header{position:relative;overflow:hidden;background:linear-gradient(120deg,#0c2035,#173d60 62%,#116e78);color:white;padding:30px max(20px,calc((100% - 1180px)/2));isolation:isolate}
+header:before,header:after{content:"";position:absolute;border:1px solid #ffffff18;border-radius:50%;z-index:-1;animation:float 9s ease-in-out infinite}
+header:before{width:330px;height:330px;right:7%;top:-190px}header:after{width:220px;height:220px;right:19%;top:-130px;animation-delay:-3s}
+.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.73rem;font-weight:800;color:#9ce6df;display:flex;align-items:center;gap:9px}
+.eyebrow:before{content:"";width:25px;height:2px;background:var(--gold)}
+h1{margin:10px 0 7px;font-size:clamp(1.6rem,4vw,2.5rem);letter-spacing:-.035em;line-height:1.1}header p{margin:0;color:#d8e5ef;max-width:680px;line-height:1.55}
+main{max-width:1180px;margin:26px auto;padding:0 18px 38px}
+.top-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:22px;align-items:stretch}.selectors{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wheel-stage{max-width:470px;margin:0 auto}
+.card{background:rgba(255,255,255,.94);border:1px solid #dfe7f0;border-radius:22px;padding:23px;box-shadow:var(--shadow);animation:none}
+.card:nth-child(2){animation:none}.assignments-card{margin-top:22px}.assignments-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:15px}.assignments-heading h2{margin:0 0 4px}.assignments-heading p{margin:0;color:var(--muted);font-size:.82rem}.result-card{display:flex;flex-direction:column;min-height:100%}.result-card .result{margin-top:4px;padding:28px 18px}.result-details{margin-top:25px}.detail-label{font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;font-weight:800;color:var(--muted);margin-bottom:10px}.result-details .rule{margin-bottom:10px}.result-tip{margin-top:auto;padding:13px;border-radius:11px;background:#f0f6fa;color:#51687c;font-size:14px;line-height:1.5}
+h2{font-size:1.13rem;margin:0 0 18px;color:var(--navy);display:flex;align-items:center;gap:10px}
+h2:before{content:"";width:5px;height:23px;border-radius:5px;background:linear-gradient(var(--teal),#7ed8d0)}
+label{display:block;font-size:14px;font-weight:800;margin:0 0 8px;color:#33465a}
+select,button{font:inherit;border-radius:11px}
+select{width:100%;padding:12px 13px;border:1px solid #d2dce7;background:#fbfdff;color:var(--ink);margin-bottom:15px;outline:none;transition:border .2s,box-shadow .2s}
+select:focus{border-color:var(--teal);box-shadow:0 0 0 3px #10a6a01a}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{border:0;padding:12px 15px;font-weight:800;cursor:pointer;transition:filter .18s}
+button:hover:not(:disabled){filter:brightness(1.04);box-shadow:none}
+button:active:not(:disabled){filter:brightness(.98)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.primary{background:#0e918c;color:white;width:100%;font-size:14px;box-shadow:none}
+.primary:hover:not(:disabled){box-shadow:0 12px 24px #0e9f9940}
+.secondary{background:#e8eef5;color:var(--navy)}
+.wheel-wrap{position:relative;width:min(100%,440px);margin:13px auto 8px;aspect-ratio:1;filter:drop-shadow(0 12px 18px #10243a18)}
+canvas{width:100%;height:100%;display:block}
+.pointer{position:absolute;z-index:2;left:50%;top:-4px;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:39px solid #f2bd4f;filter:drop-shadow(0 4px 3px #0003)}
+.center-cap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:65px;height:65px;border-radius:50%;background:#f4f7fa;border:7px solid var(--navy);box-shadow:0 3px 12px #0002;pointer-events:none}
+.hint{text-align:center;color:var(--muted);font-size:14px;margin:10px 0 15px}
+.result{margin-top:18px;border-radius:16px;background:linear-gradient(130deg,#edf9f6,#f6fcfb);border:1px solid #c7e9e1;padding:18px;text-align:center;position:relative;overflow:hidden}
+.result:after{content:"";position:absolute;width:120px;height:120px;border:1px solid #10a6a015;border-radius:50%;right:-55px;top:-55px}
+.result .small{font-size:.72rem;text-transform:uppercase;letter-spacing:.13em;color:#3b766c;font-weight:900}
+.result strong{display:block;font-size:clamp(1.22rem,3vw,1.85rem);color:#116354;margin:8px 0;overflow-wrap:anywhere}
+.result p{margin:0;color:#45665f;font-size:14px;line-height:1.45}
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.rule{border:1px solid var(--line);border-radius:13px;padding:13px;background:#fbfdff}
+.rule strong{display:block;font-size:.86rem;color:var(--navy);margin-bottom:4px}.rule span{font-size:14px;color:var(--muted);line-height:1.5}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:13px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f0f5fa;color:var(--navy);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+tbody tr{transition:background .18s}tbody tr:hover{background:#f7fbff}tbody tr:last-child td{border-bottom:0}
+td select{min-width:145px;margin:0;padding:8px;font-size:14px;background:#fff}
+.pending{color:#8a5a00;background:#fff4d6;padding:5px 8px;border-radius:7px;font-size:.74rem;font-weight:800;white-space:nowrap}
+.assigned{color:var(--green);font-weight:900}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.actions button{font-size:.88rem}
+.print-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:17px;background:#102f4d;color:#fff;box-shadow:none}
+.print-btn svg{width:18px;height:18px}
+.note{font-size:14px;color:var(--muted);line-height:1.55;margin:13px 1px 0}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6eef8;color:#214e78;font-size:.72rem;font-weight:900}
+.toast{min-height:20px;font-size:.83rem;color:var(--green);margin-top:10px;line-height:1.45}
+footer{text-align:center;color:var(--muted);font-size:.78rem;padding:0 16px 25px}
+@keyframes rise{from{opacity:0;transform:translateY(13px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(13px)}}
+@media(max-width:850px){.top-layout{grid-template-columns:1fr}.card{padding:20px}.wheel-wrap{max-width:390px}.wheel-stage{max-width:440px}main{margin-top:17px}.result-card{min-height:0}.result-tip{margin-top:15px}}
+@media(max-width:480px){header{padding:24px 18px}main{padding:0 11px 25px}.card{padding:16px;border-radius:17px}.selectors{grid-template-columns:1fr;gap:0}.wheel-wrap{max-width:330px}.rules{grid-template-columns:1fr}.assignments-heading{align-items:stretch;flex-direction:column}.assignments-heading .print-btn{width:100%}h1{font-size:1.65rem}.table-wrap{border-radius:10px}}
+ 
+.duration-control{max-width:260px;margin:0 auto 14px}
+.duration-control select{margin-bottom:0}
+.ticker-monitor{position:relative;isolation:isolate;overflow:hidden;min-height:245px;margin:8px auto 0;padding:18px;border-radius:14px;background:rgba(10,27,43,.96);border:1px solid #2c6275;box-shadow:inset 0 0 0 1px #ffffff0b,0 12px 28px #10243a18;color:#e9ffff}
+.ticker-monitor:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse at center,#0b77774a 0,transparent 62%);pointer-events:none}
+.ticker-monitor.is-running{border-color:#22c7bb;box-shadow:inset 0 0 24px #10a6a01c,0 0 0 3px #10a6a015}
+.ticker-monitor.is-running .ticker-name{animation:monitorPulse .48s ease-in-out infinite alternate}
+.monitor-top,.monitor-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:.12em;color:#8eb9c6}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#35d4a4;display:inline-block;box-shadow:0 0 12px #35d4a4}
+.is-running .live-dot{animation:blink .7s steps(2,start) infinite}
+.monitor-random{border:1px solid #315d6b;border-radius:4px;padding:4px 6px;color:#9fe7de}
+.ticker-window{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:150px;padding:18px 4px;position:relative}
+.ticker-name{font-size:clamp(19px,3vw,30px);font-weight:800;line-height:1.3;letter-spacing:.025em;color:#fff;text-shadow:0 0 16px #10a6a055;overflow-wrap:anywhere}
+.ticker-sub{font-size:12px;line-height:1.6;color:#9bbbc7;margin-top:12px}
+.monitor-bottom{border-top:1px solid #ffffff18;padding-top:12px;color:#6f9aa8}
+.scanline{position:absolute;left:0;right:0;top:0;height:2px;background:#48e1d566;opacity:0;pointer-events:none}
+.is-running .scanline{opacity:1;animation:scan 2.4s linear infinite}
+.ticker-monitor.is-winner{border-color:#e8b75a;box-shadow:inset 0 0 28px #e8b75a18,0 0 0 3px #e8b75a20}
+.is-winner .ticker-name{color:#ffe4a0;text-shadow:0 0 22px #e8b75a66}
+.is-winner .live-dot{background:#e8b75a;box-shadow:0 0 12px #e8b75a}
+@keyframes monitorPulse{from{opacity:.62;filter:blur(.25px)}to{opacity:1;filter:blur(0)}}
+@keyframes blink{to{opacity:.25}}
+@keyframes scan{from{top:0}to{top:100%}}
+@media(prefers-reduced-motion:reduce){.ticker-monitor.is-running .ticker-name,.is-running .live-dot,.is-running .scanline{animation:none!important}}
+/* Diseño adaptable para escritorio, tablet y móvil */
+img,canvas,svg{max-width:100%}
+button,select{min-height:44px}
+.top-layout>*,.card,.wheel-stage,.result-card{min-width:0}
+@media(max-width:900px){
+  header{padding:27px 24px}
+  main{max-width:760px;margin:20px auto;padding:0 16px 30px}
+  .top-layout{grid-template-columns:minmax(0,1fr);gap:16px}
+  .wheel-stage{width:100%;max-width:560px}
+  .ticker-monitor{min-height:225px}
+  .result-card{min-height:0}
+}
+@media(max-width:600px){
+  header{padding:23px 17px}
+  .eyebrow{font-size:.68rem;letter-spacing:.1em;line-height:1.5}
+  h1{font-size:clamp(1.5rem,7vw,2rem);line-height:1.15}
+  header p{font-size:.92rem}
+  main{margin:14px auto;padding:0 10px 24px}
+  .card{padding:16px;border-radius:16px}
+  h2{font-size:1.05rem;line-height:1.35;align-items:flex-start}
+  .selectors,.controls{grid-template-columns:minmax(0,1fr);gap:2px}
+  select{padding:11px 12px}
+  .duration-control{max-width:none;margin:4px 0 13px}
+  .ticker-monitor{min-height:205px;padding:13px;border-radius:12px}
+  .monitor-top,.monitor-bottom{font-size:9px;letter-spacing:.06em;gap:6px;flex-wrap:wrap}
+  .ticker-window{min-height:125px;padding:15px 2px}
+  .ticker-name{font-size:clamp(18px,6vw,27px);overflow-wrap:anywhere}
+  .ticker-sub{font-size:11px}
+  .hint{font-size:13px;line-height:1.5}
+  .result-card .result{padding:22px 13px}
+  .result-details{margin-top:19px}
+  .rule{padding:11px}
+  .assignments-heading{align-items:stretch;flex-direction:column;gap:12px}
+  .assignments-heading .print-btn{width:100%;margin-top:0}
+  .table-wrap{margin:0 -2px;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:590px;font-size:13px}
+  th,td{padding:10px 8px}
+  .note{font-size:13px}
+  footer{font-size:.75rem}
+}
+@media(max-width:360px){
+  .card{padding:13px}
+  .ticker-monitor{padding:10px}
+  .monitor-random{font-size:9px}
+  .result strong{font-size:1.15rem}
+}
+@media print{
+ @page{size:A4 landscape;margin:10mm}
+ body{background:white;color:#172536;font-size:10pt}
+ header{padding:0 0 12px;background:white;color:#10243a;border-bottom:2px solid #1f4e78}
+ header:before,header:after,header p,.eyebrow:before{display:none!important}
+ .eyebrow{color:#1f4e78;font-size:8pt}h1{font-size:20pt;margin:4px 0}
+ main{max-width:none;margin:12px 0 0;padding:0}
+ .top-layout{display:none}.assignments-card{display:block;margin:0}.assignments-heading{display:block}.assignments-heading h2{font-size:15pt}.grid{display:block}
+ .card{box-shadow:none;border:0;border-radius:0;padding:0;animation:none}
+ .grid>.card:nth-child(2){display:block}
+ .grid>.card:nth-child(2)>h2{font-size:14pt;margin-bottom:9px}
+ .table-wrap{overflow:visible;border:1px solid #cbd5e1}
+ table{min-width:0;width:100%;font-size:9pt;table-layout:fixed}
+ th,td{padding:8px 7px;overflow-wrap:anywhere}
+ th{background:#eaf1f7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ td select{display:none}
+ /* Print names and pending labels as plain readable text */
+ .print-value{display:inline!important}
+ .actions,.print-btn,.note,.toast,footer{display:none!important}
+ tbody tr{break-inside:avoid}
+}
+
+/* Cabecera compacta: una sola línea en pantallas amplias */
+header{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px 16px;
+  padding:12px max(20px,calc((100% - 1180px)/2));
+}
+header:before,header:after{opacity:.45}
+.eyebrow{
+  flex:0 0 auto;
+  font-size:.66rem;
+  letter-spacing:.09em;
+  white-space:nowrap;
+}
+.eyebrow:before{width:16px}
+header h1{
+  flex:0 1 auto;
+  margin:0;
+  font-size:clamp(1.2rem,2vw,1.65rem);
+  letter-spacing:-.025em;
+  line-height:1.2;
+  white-space:nowrap;
+}
+header p{
+  flex:1 1 260px;
+  max-width:none;
+  font-size:.82rem;
+  line-height:1.35;
+}
+main{margin-top:16px}
+.top-layout{gap:16px}
+.card{padding:19px;border-radius:17px}
+.assignments-card{margin-top:16px}
+.result-card .result{padding:22px 16px}
+.result-details{margin-top:18px}
+@media(max-width:1000px){
+  header{gap:7px 13px;padding:13px 22px}
+  header h1{white-space:normal;font-size:clamp(1.2rem,3vw,1.55rem)}
+  header p{flex-basis:100%;font-size:.83rem}
+}
+@media(max-width:600px){
+  header{display:block;padding:13px 15px}
+  .eyebrow{white-space:normal;font-size:.62rem;margin-bottom:5px}
+  header h1{font-size:1.3rem;line-height:1.2;margin:0 0 5px}
+  header p{font-size:.78rem;line-height:1.35}
+  main{margin:10px auto;padding:0 10px 20px}
+  .card{padding:14px;border-radius:13px}
+  .top-layout{gap:12px}
+  .assignments-card{margin-top:12px}
+}
+
+
+/* Ajustes institucionales: colores sólidos y controles alineados */
+body{background:#edf2f8!important}
+header{background:#12304b!important;padding:12px max(20px,calc((100% - 1180px)/2))!important;min-height:0!important}
+header:before,header:after{display:none!important}
+header .eyebrow{display:none!important}
+header h1{margin:0!important;font-size:clamp(1.15rem,2.2vw,1.55rem)!important;line-height:1.25!important;letter-spacing:0!important;white-space:nowrap}
+header p{display:none!important}
+main{margin-top:16px!important}
+.card{background:#fff!important;box-shadow:0 5px 18px rgba(16,36,58,.07)!important;border-radius:16px!important}
+.wheel-card h2{white-space:nowrap;font-size:1.12rem;margin-bottom:18px}
+.wheel-card .selectors{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) minmax(130px,.8fr);align-items:end;gap:10px}
+.wheel-card .duration-control{max-width:none;margin:0;min-width:0}
+.wheel-card .selectors select,.wheel-card .duration-control select{margin-bottom:0;min-width:0}
+body .result,body .ticker-monitor{background:#10283d!important}
+body .ticker-monitor:before{display:none!important}
+body .result{background:#edf7f4!important}
+button,.primary,.print-btn{background:#0e827d!important;background-image:none!important}
+.secondary{background:#e8eef5!important;background-image:none!important}
+.result-tip{background:#f0f5f8!important}
+@media(max-width:900px){
+ header{padding:12px 18px!important}
+ .wheel-card .selectors{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .wheel-card .duration-control{grid-column:1/-1}
+}
+@media(max-width:560px){
+ header{padding:11px 13px!important}
+ header h1{white-space:normal;font-size:1.12rem!important}
+ main{margin-top:10px!important;padding-left:10px!important;padding-right:10px!important}
+ .card{padding:14px!important}
+ .wheel-card h2{white-space:normal;font-size:1.05rem}
+ .wheel-card .selectors{grid-template-columns:minmax(0,1fr);gap:10px}
+ .wheel-card .duration-control{grid-column:auto}
+ .wheel-card .selectors select,.wheel-card .duration-control select{min-height:44px}
+}
+@media print{
+ /* El PDF contiene solo las asignaciones de CNDF: sin columna CNDA */
+ table thead th:nth-child(4),table tbody td:nth-child(4){display:none!important}
+ header{background:#fff!important;color:#12304b!important;border-bottom:1px solid #cbd5e1!important;padding:0 0 10px!important}
+ header h1{font-size:18pt!important;white-space:normal!important}
+}
+
+
+/* Paleta institucional: azul oscuro, blanco y grises; sin degradados */
+:root{--navy:#003366;--blue:#004b87;--teal:#004b87;--gold:#003366;--ink:#182638;--muted:#617184;--bg:#eef2f6;--card:#ffffff;--line:#d5dee8;--green:#18794e;--shadow:0 5px 18px rgba(0,35,75,.08)}
+html{scroll-behavior:auto}
+body{background:#eef2f6!important;color:#182638}
+header{background:#003366!important;color:#fff!important;border-bottom:4px solid #004b87}
+header:before,header:after{display:none!important}
+.card{background:#fff!important;border:1px solid #d5dee8!important;box-shadow:0 5px 18px rgba(0,35,75,.08)!important}
+.ticker-monitor{background:#082746!important;border:1px solid #244c72!important;box-shadow:none!important}
+.ticker-monitor:before{display:none!important}
+.result{background:#f1f5f9!important;border:1px solid #d5dee8!important}
+.result strong{color:#003366!important}
+.primary,.print-btn,button.primary{background:#003366!important;background-image:none!important;color:#fff!important}
+.secondary{background:#e8edf3!important;background-image:none!important;color:#003366!important}
+select{background:#fff!important;border-color:#cbd5e1!important}
+th{background:#e7edf4!important;color:#003366!important}
+.result-tip{background:#f1f5f9!important}
+@media print{
+  /* La columna CNDA queda visible en pantalla, pero no forma parte del PDF */
+  th.col-cnda,td.col-cnda{display:none!important}
+  table{width:100%!important;table-layout:fixed!important}
+  header{background:#fff!important;color:#003366!important;border-bottom:2px solid #003366!important}
+  header h1{color:#003366!important}
+}
+
+
+/* Sorteo secuencial: tres monitores iguales, paleta institucional sólida */
+.hidden-controls{display:none!important}
+.draw-monitors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;margin:8px 0 14px}
+.draw-monitor{position:relative;isolation:isolate;overflow:hidden;min-width:0;min-height:220px;padding:13px;border-radius:12px;background:#082746;border:1px solid #244c72;color:#fff}
+.draw-monitor .monitor-top,.draw-monitor .monitor-bottom{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;font-size:9px;font-weight:800;letter-spacing:.04em;color:#c4d7e8}
+.draw-monitor .monitor-random{border:1px solid #6d8eaa;border-radius:4px;padding:3px 5px;color:#fff;font-size:8px}
+.draw-monitor .ticker-window{min-height:135px;padding:12px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.draw-monitor .ticker-name{font-size:clamp(15px,1.5vw,23px);line-height:1.25;font-weight:800;color:#fff;overflow-wrap:anywhere;text-shadow:none}
+.draw-monitor .ticker-sub{font-size:11px;line-height:1.4;color:#c4d7e8;margin-top:9px;overflow-wrap:anywhere}
+.draw-monitor .monitor-bottom{border-top:1px solid #ffffff25;padding-top:9px;color:#c4d7e8}
+.draw-monitor.is-running{border-color:#5e9bd0;box-shadow:inset 0 0 0 1px #5e9bd033}
+.draw-monitor.is-running .ticker-name{animation:monitorPulse .45s ease-in-out infinite alternate}
+.draw-monitor.is-winner{border-color:#7fb3e3;background:#123d66}
+.draw-monitor.is-winner .ticker-name{color:#fff}
+.draw-monitor .live-dot{background:#76b7f0;box-shadow:none;width:7px;height:7px;border-radius:50%;display:inline-block}
+.draw-monitor.is-running .live-dot{animation:blink .7s steps(2,start) infinite}
+.wheel-card h2{margin-bottom:12px}
+.wheel-stage{max-width:none}
+@media(max-width:780px){.draw-monitors{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.draw-monitor{padding:9px;min-height:205px}.draw-monitor .ticker-name{font-size:clamp(13px,2.5vw,18px)}.draw-monitor .monitor-top,.draw-monitor .monitor-bottom{font-size:8px}}
+@media(max-width:520px){.draw-monitors{grid-template-columns:1fr}.draw-monitor{min-height:150px}.draw-monitor .ticker-window{min-height:85px}.draw-monitor .ticker-name{font-size:22px}}
+
+
+/* Vista amplia de oficina: monitores a todo el ancho disponible */
+main{max-width:none!important;width:100%!important;margin:12px auto!important;padding:0 18px 28px!important}
+.top-layout{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:14px!important;width:100%!important}
+.wheel-card{width:100%!important;min-width:0}
+.wheel-stage{max-width:none!important;width:100%!important}
+.draw-monitors{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;width:100%!important}
+.draw-monitor{width:100%;min-width:0;min-height:265px;padding:16px;display:flex;flex-direction:column}
+.draw-monitor .ticker-window{flex:1;min-height:150px}
+.draw-monitor .ticker-name{font-size:clamp(18px,2vw,30px)}
+.phase-button{width:100%;margin-top:12px;min-height:42px;background:#fff!important;color:#003366!important;border:1px solid #8ba9c8!important;border-radius:8px!important;font-weight:800;cursor:pointer}
+.phase-button:hover:not(:disabled){background:#e8f0f8!important}
+.phase-button:disabled{opacity:.42;cursor:not-allowed}
+.draw-monitor.is-running{border-color:#8db9e6!important;box-shadow:inset 0 0 0 2px #8db9e6!important}
+.draw-monitor.is-winner{border-color:#fff!important}
+@media(max-width:700px){
+ main{padding:0 10px 20px!important}
+ .draw-monitors{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+ .draw-monitor{padding:9px;min-height:230px}
+ .draw-monitor .monitor-top,.draw-monitor .monitor-bottom{font-size:8px;letter-spacing:0}
+ .draw-monitor .ticker-window{min-height:125px;padding:8px 1px}
+ .draw-monitor .ticker-name{font-size:clamp(13px,2.4vw,18px)}
+ .draw-monitor .ticker-sub{font-size:10px}
+ .phase-button{font-size:11px;padding:8px 4px}
+}
+@media(max-width:480px){
+ .draw-monitors{grid-template-columns:1fr!important}
+ .draw-monitor{min-height:175px;padding:12px}
+ .draw-monitor .ticker-window{min-height:90px}
+ .draw-monitor .ticker-name{font-size:22px}
+ .phase-button{font-size:13px}
+}
+
+
+@media print{
+ @page{size:A4 landscape;margin:10mm}
+ html,body{margin:0!important;padding:0!important;background:#fff!important;color:#172536!important}
+ body>header{display:none!important}
+ main{display:block!important;max-width:none!important;width:100%!important;margin:0!important;padding:0!important}
+ .top-layout{display:none!important}
+ .assignments-card{display:block!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important}
+ .assignments-heading{display:block!important;margin:0 0 12px!important}
+ .assignments-heading h2{font-size:16pt!important;color:#003366!important;margin:0 0 4px!important}
+ .assignments-heading p{font-size:9pt!important;margin:0!important;color:#475569!important}
+ .assignments-heading .print-btn{display:none!important}
+ .table-wrap{display:block!important;overflow:visible!important;border:1px solid #cbd5e1!important;border-radius:0!important}
+ table{display:table!important;width:100%!important;min-width:0!important;table-layout:fixed!important;font-size:9pt!important;border-collapse:collapse!important}
+ thead{display:table-header-group!important}
+ tbody{display:table-row-group!important}
+ tr{break-inside:avoid!important;page-break-inside:avoid!important}
+ th,td{padding:8px 7px!important;border:1px solid #d5dee8!important;overflow-wrap:anywhere!important}
+ th{background:#e7edf4!important;color:#003366!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ td select{display:none!important}
+ .print-value{display:inline!important}
+ .note,.toast,footer,.badge,.no-print{display:none!important}
+}
+
+
+/* Animación más visible para fecha y turno, sin degradados */
+.draw-monitor{position:relative;isolation:isolate}
+.draw-monitor.is-running{border:2px solid #70b8f4!important;box-shadow:0 0 0 3px #c5e2fb,inset 0 0 22px #4c9bd52b!important}
+.draw-monitor.is-running:after{
+ content:"";position:absolute;z-index:0;left:0;right:0;top:-35%;height:22%;
+ background:#8ecbff;opacity:.14;pointer-events:none;
+ animation:monitorSweep 1.05s linear infinite;
+}
+.draw-monitor.is-running .ticker-window{position:relative}
+.draw-monitor.is-running .ticker-name{animation:monitorFlash .32s ease-in-out infinite alternate}
+.draw-monitor.is-running .ticker-sub{color:#fff}
+.draw-monitor.is-running .live-dot{background:#fff;box-shadow:0 0 0 4px #8ecbff55,0 0 15px #8ecbff;animation:monitorDot .55s ease-in-out infinite alternate}
+.draw-monitor.is-running .monitor-random{background:#1f5686;border-color:#9bd2ff}
+@keyframes monitorSweep{from{top:-35%}to{top:115%}}
+@keyframes monitorFlash{from{opacity:.45;transform:scale(.97);letter-spacing:0}to{opacity:1;transform:scale(1.03);letter-spacing:.035em}}
+@keyframes monitorDot{from{transform:scale(.8)}to{transform:scale(1.18)}}
+@media(prefers-reduced-motion:reduce){
+ .draw-monitor.is-running:after,.draw-monitor.is-running .ticker-name,.draw-monitor.is-running .live-dot{animation:none!important}
+}
+
+
+#startAll{display:block;width:100%;max-width:none;margin:12px 0 0;background:#003366!important;color:#fff!important;border:0;border-radius:9px;padding:14px 18px;font-weight:800;letter-spacing:.02em}
+#startAll:disabled{opacity:.6;cursor:wait}
+
+
+/* Monitores UMOI: acabado institucional profesional */
+.draw-monitors{gap:16px!important;margin:14px 0 18px!important;align-items:stretch}
+.draw-monitor{background:#f8fafc!important;color:#102a43!important;border:1px solid #cbd5e1!important;border-top:4px solid #164e78!important;border-radius:12px!important;box-shadow:0 4px 14px rgba(15,35,55,.08)!important;min-height:285px!important;padding:16px!important;transition:border-color .2s,box-shadow .2s,transform .2s}
+.draw-monitor .monitor-top{color:#52677b!important;font-size:10px!important;letter-spacing:.09em!important;text-transform:uppercase}
+.draw-monitor .monitor-random{background:#e7eef5!important;color:#164e78!important;border:1px solid #c3d2e0!important;border-radius:5px!important;font-size:9px!important;padding:4px 7px!important}
+.draw-monitor .ticker-window{min-height:145px!important;padding:16px 6px!important}
+.draw-monitor .ticker-name{color:#123a5a!important;font-size:clamp(19px,1.65vw,27px)!important;font-weight:800!important;letter-spacing:-.025em!important;text-shadow:none!important}
+.draw-monitor .ticker-sub{color:#5b7083!important;font-size:12px!important;margin-top:10px!important}
+.draw-monitor .monitor-bottom{border-top:1px solid #dbe4ec!important;color:#61758a!important;padding-top:11px!important;font-size:10px!important}
+.draw-monitor .live-dot{background:#647f98!important;box-shadow:none!important}
+.draw-monitor.is-running{background:#f0f7fc!important;border-color:#2875a8!important;border-top-color:#2875a8!important;box-shadow:0 0 0 3px #2875a81a,0 8px 20px #102a4314!important}
+.draw-monitor.is-running .ticker-name{color:#075985!important}
+.draw-monitor.is-winner{background:#f0f7f2!important;border-color:#75a88a!important;border-top-color:#26734d!important;box-shadow:0 4px 14px #155e3610!important}
+.draw-monitor.is-winner .ticker-name{color:#155e36!important}
+.draw-monitor.is-winner .live-dot{background:#26734d!important}
+.phase-button{width:100%;margin-top:12px;min-height:42px;padding:10px 12px;background:#164e78!important;color:#fff!important;border:1px solid #164e78!important;border-radius:7px!important;font-size:12px!important;font-weight:750!important;letter-spacing:.01em;cursor:pointer;transition:background .2s,border-color .2s}
+.phase-button:hover:not(:disabled){background:#0e3a5d!important;border-color:#0e3a5d!important}
+.phase-button:disabled{background:#e2e8f0!important;color:#8292a3!important;border-color:#d4dde6!important;cursor:not-allowed;opacity:1!important}
+#startAll{background:#0f2f4b!important;border:1px solid #0f2f4b!important;border-radius:8px!important;padding:12px 20px!important;font-weight:800!important;box-shadow:0 3px 8px #102a4317}
+#startAll:hover:not(:disabled){background:#164e78!important}
+@media(max-width:780px){.draw-monitors{gap:9px!important}.draw-monitor{padding:11px!important;min-height:265px!important}.draw-monitor .ticker-window{min-height:125px!important}.draw-monitor .ticker-name{font-size:clamp(14px,2.3vw,20px)!important}.phase-button{font-size:10px!important;padding:8px 5px!important}}
+@media(max-width:520px){.draw-monitors{grid-template-columns:1fr!important}.draw-monitor{min-height:0!important;padding:14px!important}.draw-monitor .ticker-window{min-height:85px!important}.draw-monitor .ticker-name{font-size:23px!important}.phase-button{font-size:12px!important}}
+
+
+/* Monitores UMOI: acabado oscuro institucional, minimalista y con animación visible */
+.draw-monitors{gap:14px!important}
+.draw-monitor{position:relative!important;overflow:hidden!important;background:#081827!important;color:#eaf3fb!important;border:1px solid #24465f!important;border-top:3px solid #2a7892!important;border-radius:12px!important;box-shadow:0 12px 28px rgba(2,12,23,.24),inset 0 1px 0 #ffffff0a!important;transition:border-color .25s,box-shadow .25s,transform .25s!important}
+.draw-monitor:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#0c2538 0%,#081827 70%);z-index:0}
+.draw-monitor>*{position:relative;z-index:1}
+.draw-monitor .monitor-top,.draw-monitor .monitor-bottom{color:#8ea9bd!important}
+.draw-monitor .monitor-random{background:#102b40!important;border:1px solid #31536a!important;color:#b6d7e8!important;border-radius:5px!important}
+.draw-monitor .ticker-window{min-height:158px!important;border-radius:8px!important;margin:12px 0!important;background:#06131f!important;border:1px solid #19364c!important;position:relative!important;overflow:hidden!important}
+.draw-monitor .ticker-window:after{content:"";position:absolute;left:0;right:0;top:-40%;height:36%;background:linear-gradient(180deg,transparent,rgba(42,190,211,.16),transparent);opacity:0;pointer-events:none}
+.draw-monitor.is-running .ticker-window:after{opacity:1;animation:proScan 1.25s linear infinite}
+.draw-monitor .ticker-name{font-size:clamp(20px,2vw,29px)!important;color:#f2f7fb!important;letter-spacing:.015em!important;text-shadow:0 0 18px #31b7d833!important}
+.draw-monitor .ticker-sub{color:#8ea9bd!important}
+.draw-monitor .monitor-bottom{border-top:1px solid #1c3548!important;padding-top:12px!important}
+.draw-monitor .live-dot{background:#5c829d!important;box-shadow:0 0 0 3px #5c829d22!important}
+.draw-monitor.is-running{border-color:#35c3d3!important;box-shadow:0 0 0 1px #35c3d344,0 0 28px #18a9c222,inset 0 0 28px #18a9c211!important;transform:translateY(-2px)!important}
+.draw-monitor.is-running .live-dot{background:#43e0c0!important;box-shadow:0 0 14px #43e0c0!important;animation:proBlink .55s steps(2,start) infinite!important}
+.draw-monitor.is-running .ticker-name{animation:proTextPulse .42s ease-in-out infinite alternate!important;color:#b8f7f1!important}
+.draw-monitor.is-winner{border-color:#45d6b1!important;box-shadow:0 0 0 1px #45d6b144,0 0 24px #45d6b11a,inset 0 0 24px #45d6b10c!important}
+.draw-monitor.is-winner .ticker-name{color:#8cf3d4!important;text-shadow:0 0 20px #45d6b133!important}
+.draw-monitor .phase-button{background:#153a53!important;color:#e8f5fc!important;border:1px solid #315a73!important;border-radius:7px!important;letter-spacing:.02em!important}
+.draw-monitor .phase-button:hover:not(:disabled){background:#1b4d6c!important;border-color:#4b8eaa!important}
+.draw-monitor .phase-button:disabled{background:#102638!important;color:#597286!important;border-color:#1d374b!important}
+#startAll{background:#147b86!important;color:#f5ffff!important;border:1px solid #2497a0!important;border-radius:9px!important;min-height:52px!important;box-shadow:0 8px 20px #06212e55!important;letter-spacing:.02em!important}
+#startAll:hover:not(:disabled){background:#1995a0!important;box-shadow:0 0 0 3px #2fc5cc22!important}
+@keyframes proScan{from{top:-40%}to{top:120%}}
+@keyframes proBlink{to{opacity:.25}}
+@keyframes proTextPulse{from{opacity:.62;transform:scale(.985)}to{opacity:1;transform:scale(1.015)}}
+@media(prefers-reduced-motion:reduce){.draw-monitor.is-running .ticker-window:after,.draw-monitor.is-running .ticker-name,.draw-monitor.is-running .live-dot{animation:none!important}}
+
+
+/* Listado estilo hoja de cálculo: limpio, sin bordes de tarjeta ni cuadrícula pesada */
+.assignments-card{border:0!important;box-shadow:none!important;border-radius:0!important;background:transparent!important;padding:8px 0 0!important}
+.assignments-card .assignments-heading{align-items:center;margin-bottom:18px}
+.assignments-card .assignments-heading h2{color:#e8f1fb!important;margin-bottom:5px}
+.assignments-card .assignments-heading p{color:#8ea6bb!important}
+.list-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.list-toolbar .print-btn{width:auto;margin:0;min-height:42px;padding:10px 15px;border-radius:8px!important;background:#176b82!important;border:0!important;color:#f4fbff!important}
+.clear-list-btn{min-height:42px;padding:10px 15px;border-radius:8px!important;background:transparent!important;color:#d4e2ee!important;border:0!important;box-shadow:none!important}
+.clear-list-btn:hover:not(:disabled){background:#ffffff12!important;color:#fff!important}
+.table-wrap{overflow-x:auto;border:0!important;border-radius:0!important;background:transparent!important}
+.assignments-card table{width:100%;min-width:640px;border-collapse:separate;border-spacing:0;font-size:13px;color:#dce8f4}
+.assignments-card thead th{background:#10243a!important;color:#8fb3ca!important;text-transform:uppercase;font-size:11px;letter-spacing:.09em;padding:13px 15px;border:0!important;border-bottom:1px solid #284155!important}
+.assignments-card tbody tr{background:transparent!important}
+.assignments-card tbody tr:nth-child(even){background:#ffffff05!important}
+.assignments-card tbody tr:hover{background:#ffffff0b!important}
+.assignments-card tbody td{padding:14px 15px;border:0!important;border-bottom:1px solid #ffffff0d!important;color:#dce8f4;vertical-align:middle}
+.assignments-card tbody td:first-child strong{color:#fff;font-size:13px;letter-spacing:.02em}
+.assignments-card tbody td:first-child span{color:#8fa5b8!important;display:inline-block;margin-top:3px;line-height:1.4}
+.assignments-card td select{min-width:180px;margin:0;padding:9px 11px;background:transparent!important;color:#e7f0f8!important;border:0!important;border-radius:0!important;box-shadow:none!important;outline:none!important}
+.assignments-card td select:focus{background:#ffffff0b!important;box-shadow:inset 0 -2px #3db6c4!important}
+.assignments-card td select option{background:#10243a;color:#e7f0f8}
+.assignments-card .pending{background:transparent!important;color:#8fa5b8!important;padding:0!important;border-radius:0!important;font-size:12px}
+.assignments-card .assigned{color:#69d8b0!important}
+.assignments-card .note{color:#8198ab!important}
+@media(max-width:650px){.assignments-card .assignments-heading{align-items:stretch;flex-direction:column}.list-toolbar{display:grid;grid-template-columns:1fr 1fr}.list-toolbar button{width:100%!important}.assignments-card table{min-width:600px}}
+@media print{.list-toolbar{display:none!important}.assignments-card{background:#fff!important;color:#111!important}.assignments-card .assignments-heading h2,.assignments-card .assignments-heading p,.assignments-card tbody td{color:#111!important}.assignments-card table{color:#111!important}.assignments-card thead th{background:#e7edf4!important;color:#003366!important;border-bottom:1px solid #d4dce5!important}.assignments-card tbody td{border-bottom:1px solid #e6eaf0!important}.assignments-card td select{color:#111!important}}
+
+
+/* REVISIÓN VISUAL GLOBAL: tema oscuro institucional, alto contraste y esquinas cuadradas */
+:root{--navy:#071b2d;--blue:#164e78;--teal:#147b86;--gold:#b8d8e8;--ink:#edf4fa;--muted:#b2c2d1;--bg:#071522;--card:#0d2235;--line:#294156;--green:#69d8b0;--shadow:none}
+html,body{background:#071522!important;color:#edf4fa!important}
+body{background-image:none!important}
+header{background:#092b4a!important;color:#fff!important;border-bottom:3px solid #176b82!important;box-shadow:none!important}
+header h1{color:#fff!important}
+main{background:transparent!important}
+.card,.wheel-card,.result-card,.assignments-card{border-radius:0!important;box-shadow:none!important}
+.card{background:#0d2235!important;border:1px solid #294156!important;color:#edf4fa!important}
+h2,.card h2,.assignments-heading h2{color:#f1f6fb!important}
+h2:before{background:#4aa7bd!important;border-radius:0!important}
+label,.detail-label{color:#d9e6f0!important}
+select{background:#102b40!important;color:#f0f6fb!important;border:1px solid #3a566d!important;border-radius:0!important}
+select option{background:#102b40!important;color:#f0f6fb!important}
+button,.primary,.print-btn,#startAll,.secondary,.clear-list-btn,.phase-button{border-radius:0!important;box-shadow:none!important}
+.primary,#startAll{background:#176b82!important;color:#fff!important;border:1px solid #2d8a9c!important}
+.primary:hover:not(:disabled),#startAll:hover:not(:disabled){background:#1c7f96!important}
+.secondary{background:#20384b!important;color:#f1f6fb!important;border:1px solid #3a566d!important}
+.result,body .result{background:#102b40!important;border:1px solid #294b63!important;border-radius:0!important;color:#eaf4fb!important}
+.result .small,.result p{color:#c2d5e4!important}
+.result strong{color:#91e5d0!important}
+.result-tip,.rule{background:#10283b!important;color:#d3e0eb!important;border:1px solid #294156!important;border-radius:0!important}
+.rule strong{color:#f1f6fb!important}.rule span{color:#bdccda!important}
+.draw-monitors{gap:12px!important}
+.draw-monitor{border-radius:0!important;background:#091b2b!important;border:1px solid #2c4c65!important;color:#f1f6fb!important}
+.draw-monitor .ticker-window{border-radius:0!important;background:#06131f!important;border-color:#234156!important}
+.draw-monitor .ticker-name{color:#f4f8fc!important}
+.draw-monitor .ticker-sub,.draw-monitor .monitor-top,.draw-monitor .monitor-bottom{color:#b6c9d8!important}
+.draw-monitor.is-running{border-color:#4fc4d0!important;box-shadow:inset 0 0 0 1px #4fc4d044,0 0 20px #4fc4d018!important}
+.draw-monitor.is-winner{border-color:#69d8b0!important;background:#0b2a32!important}
+.draw-monitor.is-winner .ticker-name{color:#8cf3d4!important}
+#startAll{min-height:50px!important;margin-top:12px!important}
+.assignments-card{background:transparent!important;border:0!important;padding:8px 0 0!important}
+.assignments-card .assignments-heading h2{color:#f1f6fb!important}
+.assignments-card .assignments-heading p{color:#aebfd0!important}
+.table-wrap{border:0!important;border-radius:0!important;background:transparent!important}
+.assignments-card table{color:#e6eef6!important;border-radius:0!important}
+.assignments-card thead th{background:#12314a!important;color:#b9d8ec!important;border:0!important;border-bottom:1px solid #36536a!important}
+.assignments-card tbody tr,.assignments-card tbody tr:nth-child(even){background:#0c2032!important}
+.assignments-card tbody tr:nth-child(odd){background:#0a1b2b!important}
+.assignments-card tbody tr:hover{background:#143149!important}
+.assignments-card tbody td{color:#e0eaf3!important;border:0!important;border-bottom:1px solid #263e52!important}
+.assignments-card tbody td:first-child strong{color:#fff!important}
+.assignments-card tbody td:first-child span{color:#b7c8d7!important}
+.assignments-card td select{background:#102b40!important;color:#f2f7fb!important;border:1px solid #36536a!important;border-radius:0!important}
+.assignments-card td select option{background:#102b40!important;color:#f2f7fb!important}
+.assignments-card .pending{color:#c3d0dc!important;background:transparent!important}
+.assignments-card .assigned{color:#79e0bb!important}
+.assignments-card .note{color:#b2c2d1!important}
+.assignments-card .badge{background:#193a53!important;color:#e4f2fb!important;border-radius:0!important}
+.list-toolbar .print-btn{background:#176b82!important;color:#fff!important;border:1px solid #2d8a9c!important;border-radius:0!important}
+.clear-list-btn{background:#172d40!important;color:#dce9f3!important;border:1px solid #3a5368!important;border-radius:0!important}
+.clear-list-btn:hover:not(:disabled){background:#24465f!important}
+.toast{color:#7de0bb!important}
+footer{color:#9fb2c4!important}
+/* El contenido impreso conserva papel blanco y alto contraste */
+@media print{
+ html,body{background:#fff!important;color:#111!important}
+ header{background:#fff!important;color:#003366!important;border-radius:0!important}
+ .card,.result-card,.assignments-card{background:#fff!important;color:#111!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+ .assignments-card .assignments-heading h2,.assignments-card .assignments-heading p,.assignments-card tbody td,.assignments-card table{color:#111!important}
+ .assignments-card tbody tr,.assignments-card tbody tr:nth-child(even),.assignments-card tbody tr:nth-child(odd){background:#fff!important}
+ .assignments-card tbody td:first-child strong,.assignments-card tbody td:first-child span{color:#111!important}
+}
+
+
+/* Selector de tema: control solo con icono */
+header{position:relative!important;display:flex!important;align-items:center!important;gap:12px!important}
+header h1{flex:1 1 auto!important;min-width:0!important;white-space:normal!important}
+.theme-toggle{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 42px!important;width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;margin-left:auto!important;background:#17415f!important;color:#f8fbff!important;border:1px solid #527087!important;border-radius:0!important;cursor:pointer!important}
+.theme-toggle:hover{filter:brightness(1.15)!important}
+.theme-toggle svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:600px){header{gap:8px!important}header h1{font-size:1.05rem!important}.theme-toggle{flex-basis:38px!important;width:38px!important;height:38px!important;min-height:38px!important}}
+/* Modo claro: paleta de alto contraste, conservando esquinas cuadradas */
+body[data-theme="light"]{background:#eef2f6!important;color:#182638!important}
+body[data-theme="light"] header{background:#fff!important;color:#12304b!important;border-bottom:3px solid #d4dee8!important}
+body[data-theme="light"] header h1{color:#12304b!important}
+body[data-theme="light"] .theme-toggle{background:#e8eef5!important;color:#12304b!important;border-color:#bdcbd9!important}
+body[data-theme="light"] .card{background:#fff!important;color:#182638!important;border:1px solid #d5dee8!important;box-shadow:none!important}
+body[data-theme="light"] h2,body[data-theme="light"] .card h2,body[data-theme="light"] .assignments-heading h2{color:#12304b!important}
+body[data-theme="light"] label,body[data-theme="light"] .detail-label{color:#33465a!important}
+body[data-theme="light"] select,body[data-theme="light"] .assignments-card td select{background:#fff!important;color:#182638!important;border:1px solid #c6d2df!important}
+body[data-theme="light"] select option,body[data-theme="light"] .assignments-card td select option{background:#fff!important;color:#182638!important}
+body[data-theme="light"] .result,body[data-theme="light"] body .result{background:#f0f7f6!important;border:1px solid #c9e2dd!important;color:#182638!important}
+body[data-theme="light"] .result .small,body[data-theme="light"] .result p{color:#45665f!important}
+body[data-theme="light"] .result strong{color:#116354!important}
+body[data-theme="light"] .result-tip,body[data-theme="light"] .rule{background:#f5f8fb!important;color:#405469!important;border:1px solid #d5dee8!important}
+body[data-theme="light"] .rule strong{color:#12304b!important}
+body[data-theme="light"] .rule span{color:#617184!important}
+body[data-theme="light"] .draw-monitor{background:#f7f9fc!important;border:1px solid #cbd7e3!important;color:#182638!important}
+body[data-theme="light"] .draw-monitor .ticker-window{background:#edf3f8!important;border-color:#d5dee8!important}
+body[data-theme="light"] .draw-monitor .ticker-name{color:#12304b!important;text-shadow:none!important}
+body[data-theme="light"] .draw-monitor .ticker-sub,body[data-theme="light"] .draw-monitor .monitor-top,body[data-theme="light"] .draw-monitor .monitor-bottom{color:#52677b!important}
+body[data-theme="light"] .draw-monitor.is-running{border-color:#168a9b!important;box-shadow:inset 0 0 0 1px #168a9b33,0 0 18px #168a9b18!important}
+body[data-theme="light"] .draw-monitor.is-winner{border-color:#b88622!important;background:#fffaf0!important}
+body[data-theme="light"] .draw-monitor.is-winner .ticker-name{color:#76520a!important}
+body[data-theme="light"] #startAll{background:#176b82!important;color:#fff!important;border:1px solid #176b82!important}
+body[data-theme="light"] .assignments-card{background:transparent!important;border:0!important}
+body[data-theme="light"] .assignments-card .assignments-heading h2{color:#12304b!important}
+body[data-theme="light"] .assignments-card .assignments-heading p{color:#617184!important}
+body[data-theme="light"] .assignments-card table{color:#182638!important}
+body[data-theme="light"] .assignments-card thead th{background:#e5edf5!important;color:#12304b!important;border:0!important;border-bottom:1px solid #cbd7e3!important}
+body[data-theme="light"] .assignments-card tbody tr,body[data-theme="light"] .assignments-card tbody tr:nth-child(even){background:#fff!important}
+body[data-theme="light"] .assignments-card tbody tr:nth-child(odd){background:#f5f8fb!important}
+body[data-theme="light"] .assignments-card tbody tr:hover{background:#eaf2f8!important}
+body[data-theme="light"] .assignments-card tbody td{color:#26384b!important;border:0!important;border-bottom:1px solid #e0e7ef!important}
+body[data-theme="light"] .assignments-card tbody td:first-child strong{color:#12304b!important}
+body[data-theme="light"] .assignments-card tbody td:first-child span{color:#617184!important}
+body[data-theme="light"] .assignments-card .pending{color:#7a5700!important;background:#fff4d6!important}
+body[data-theme="light"] .assignments-card .assigned{color:#18794e!important}
+body[data-theme="light"] .assignments-card .note{color:#617184!important}
+body[data-theme="light"] .assignments-card .badge{background:#e6eef8!important;color:#214e78!important}
+body[data-theme="light"] .list-toolbar .print-btn{background:#12304b!important;color:#fff!important;border:1px solid #12304b!important}
+body[data-theme="light"] .clear-list-btn{background:#e8eef5!important;color:#12304b!important;border:1px solid #c6d2df!important}
+body[data-theme="light"] .toast{color:#18794e!important}
+body[data-theme="light"] footer,body[data-theme="light"] .note{color:#617184!important}
+@media print{.theme-toggle{display:none!important}}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">UMOI</div>
+  <h1>Sorteo 2026 · Fechas especiales UMOI</h1>
+  <button type="button" id="themeToggle" class="theme-toggle" aria-label="Cambiar a modo claro" title="Cambiar a modo claro"><svg id="themeIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></button>
+</header>
+<main>
+  <div class="top-layout">
+    <section class="card wheel-card">
+      <h2>Sorteo de selección</h2>
+      <div class="wheel-stage">
+        <div class="draw-monitors">
+          <div class="draw-monitor" id="dateMonitor">
+            <div class="monitor-top"><span class="live-dot"></span><span>BOMBO 1: FECHAS</span><span class="monitor-random">FECHA</span></div>
+            <div class="ticker-window"><div class="ticker-name" id="dateTicker">FECHA</div><div class="ticker-sub" id="dateSub">Se sorteará primero</div></div>
+            <div class="monitor-bottom"><span>01 · FECHA</span><span id="dateStatus">EN ESPERA</span></div>
+          </div>
+          <div class="draw-monitor" id="shiftMonitor">
+            <div class="monitor-top"><span class="live-dot"></span><span>BOMBO 2: TURNOS</span><span class="monitor-random">TURNO</span></div>
+            <div class="ticker-window"><div class="ticker-name" id="shiftTicker">TURNO</div><div class="ticker-sub" id="shiftSub">Se sorteará después</div></div>
+            <div class="monitor-bottom"><span>02 · TURNO</span><span id="shiftStatus">EN ESPERA</span></div>
+          </div>
+          <div class="draw-monitor" id="tickerMonitor">
+            <div class="monitor-top"><span class="live-dot"></span><span>BOMBO 3: ANALISTAS</span><span class="monitor-random">PERSONA</span></div>
+            <div class="ticker-window"><div class="ticker-name" id="tickerName">PERSONA</div><div class="ticker-sub" id="tickerSub">Se sorteará al final</div></div>
+            <div class="monitor-bottom"><span>03 · PERSONAL</span><span id="tickerCounter">EN ESPERA</span></div>
+            <div class="scanline"></div>
+          </div>
+        </div>
+        
+        <button type="button" class="primary no-print" id="startAll">Ejecutar sorteo completo</button>
+      <div class="hidden-controls" aria-hidden="true">
+        <select id="event">
+          <option value="07">07 dic</option><option value="08">08 dic</option>
+          <option value="24">24 dic</option><option value="25">25 dic</option>
+          <option value="31">31 dic</option><option value="01">01 ene</option>
+        </select>
+        <select id="shift"><option value="Diurno">Diurno</option><option value="Nocturno">Nocturno</option></select>
+        <select id="duration"><option value="5" selected>5 segundos</option></select>
+      </div>
+      </div>
+    </section>
+    <section class="card result-card">
+      <h2>Resultado del sorteo</h2>
+      <div class="result" aria-live="polite">
+        <div class="small">PERSONA SELECCIONADA</div>
+        <strong id="winner">Listo para sortear</strong>
+        <p id="winnerMeta">Selecciona una fecha y un turno.</p>
+      </div>
+      <div id="message" class="toast" role="status"></div>
+      <div class="result-details">
+        <div class="detail-label">Restricciones del personal</div>
+        <div class="rule"><strong>Solo turno diurno</strong><span>JOSUE ORTEGA · KEVIN SILVA</span></div>
+        <div class="rule"><strong>Diurno y nocturno</strong><span>OSNEILLING RAMIREZ · LUIS MORENO · JOSUE PEREZ · OSCAR HIDALGO</span></div>
+      </div>
+      <div class="result-tip">El resultado se registra automáticamente al terminar cada giro.</div>
+    </section>
+  </div>
+  <section class="card assignments-card">
+      <div class="assignments-heading">
+        <div><h2>Listado de fechas y asignaciones</h2><p>Calendario de cobertura · Fechas de diciembre</p></div>
+        <div class="list-toolbar no-print">
+          <button class="print-btn" id="print" aria-label="Imprimir listado de fechas especiales en PDF">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5h-2"/><path d="M6 14h12v8H6z"/></svg>
+            Imprimir listado en PDF
+          </button>
+          <button class="clear-list-btn" id="clearList" type="button" aria-label="Limpiar todas las asignaciones">Limpiar listado</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha / evento</th><th>Diurno</th><th>Nocturno</th></tr></thead>
+          <tbody id="assignmentRows"></tbody>
+        </table>
+      </div>
+      <p class="note">El sorteo cubre los turnos diurno y nocturno de CNDF. El sistema evita repetir una persona en el mismo turno en otras fechas mientras haya candidatos disponibles.</p>
+      <p class="note"><span class="badge">Uso local</span> Los cambios de asignación se guardan automáticamente en este navegador.</p>
+  </section>
+</main>
+<footer>Planificación de cobertura · Diciembre 2026</footer>
+<script>
+(() => {
+'use strict';
+const staff=[
+ {name:'JOSUE ORTEGA',day:true,night:false,color:'#1d4ed8'},
+ {name:'OSNEILLING RAMIREZ',day:true,night:true,color:'#b91c1c'},
+ {name:'LUIS MORENO',day:true,night:true,color:'#15803d'},
+ {name:'JOSUE PEREZ',day:true,night:true,color:'#7e22ce'},
+ {name:'KEVIN SILVA',day:true,night:false,color:'#c2410c'},
+ {name:'OSCAR HIDALGO',day:true,night:true,color:'#be185d'}
+];
+// Color característico de cada analista: fondo propio y fuente blanca en negrilla.
+function analystColor(name){const p=staff.find(x=>x.name===name);return p?p.color:'';}
+function paintAnalyst(el,name,extra){
+ const c=analystColor(name);
+ const props={background:c,'background-color':c,color:'#fff','font-weight':'800','text-shadow':'none','-webkit-print-color-adjust':'exact','print-color-adjust':'exact',...(extra||{})};
+ Object.keys(props).forEach(k=>{if(c)el.style.setProperty(k,props[k],'important');else el.style.removeProperty(k);});
+}
+const events=[
+ {day:'07',date:'07/12',name:'La Gritería',type:'Fecha especial · coordinar cobertura y permisos'},
+ {day:'08',date:'08/12',name:'Inmaculada Concepción de María',type:'Feriado nacional · pago obligatorio'},
+ {day:'24',date:'24/12',name:'Nochebuena',type:'Fecha especial · asueto/vacaciones'},
+ {day:'25',date:'25/12',name:'Navidad',type:'Feriado nacional · pago obligatorio'},
+ {day:'31',date:'31/12',name:'Fin de Año',type:'Fecha especial · asueto/vacaciones'},
+ {day:'01E',date:'01/01',name:'Año Nuevo',type:'Feriado nacional · cobertura de inicio de año'}
+];
+const KEY='sorteoUMOIDiciembreReusable_v2';
+function freshAssignments(){
+ const a={};events.forEach(e=>a[e.day]={day:'',night:'',cnda:''});
+ return a;
+}
+let assignments=freshAssignments();
+try{const stored=localStorage.getItem(KEY);if(stored){const parsed=JSON.parse(stored);if(parsed&&typeof parsed==='object'){events.forEach(e=>{if(parsed[e.day])assignments[e.day]={...assignments[e.day],...parsed[e.day]};});}}}catch(_){}
+const spinBtn=document.getElementById('spin');
+const eventSelect=document.getElementById('event');
+const shiftSelect=document.getElementById('shift');
+const durationSelect=document.getElementById('duration');
+const winnerEl=document.getElementById('winner');
+const metaEl=document.getElementById('winnerMeta');
+const messageEl=document.getElementById('message');
+const ticker=document.getElementById('tickerMonitor');
+const tickerName=document.getElementById('tickerName');
+const tickerSub=document.getElementById('tickerSub');
+const tickerCounter=document.getElementById('tickerCounter');
+// Pinta el panel del Bombo 3 con el color del analista que se muestra en cada momento.
+function paintTicker(){paintAnalyst(tickerName,tickerName.textContent.trim(),{display:'inline-block',padding:'6px 14px','border-radius':'10px'});}
+new MutationObserver(paintTicker).observe(tickerName,{childList:true,characterData:true,subtree:true});
+let spinning=false,selectedWinner=null,intervalId=null,timeoutId=null;
+function eligible(shift){return staff.filter(p=>p[shift==='Diurno'?'day':'night']);}
+// Reglas de descanso: no doble turno en el mismo día; 07 noche -> no 08 día;
+// 24 noche -> puede 31 día, pero no 31 noche; 31 noche -> descanso el 01/01.
+function assignmentConflict(day,key,name){
+ if(!name)return '';
+ // Regla de seguridad: una misma persona no puede cubrir los dos turnos del mismo día.
+ if(key==='day'&&assignments[day]?.night===name) return `${name} ya tiene asignado el turno nocturno del ${events.find(e=>e.day===day)?.date||day} y no puede cubrir también el diurno de esa fecha.`;
+ if(key==='night'&&assignments[day]?.day===name) return `${name} ya tiene asignado el turno diurno del ${events.find(e=>e.day===day)?.date||day} y no puede cubrir también el nocturno de esa fecha. Se evita una jornada de 24 horas.`;
+ if(day==='07'&&key==='night'&&assignments['08']?.day===name) return `${name} tiene turno diurno el 08/12 y no puede cubrir la noche del 07/12.`;
+ if(day==='08'&&key==='day'&&assignments['07']?.night===name) return `${name} cubre la noche del 07/12 y no puede entrar de día el 08/12.`;
+ if(day==='24'&&key==='night'&&assignments['31']?.night===name) return `${name} ya tiene asignada la noche del 31/12 y no puede cubrir también la noche del 24/12.`;
+ if(day==='31'&&key==='night'&&assignments['24']?.night===name) return `${name} ya tiene asignada la noche del 24/12 y no puede cubrir también la noche del 31/12.`;
+ if(day==='31'&&key==='night'&&(assignments['01E']?.day===name||assignments['01E']?.night===name)) return `${name} tiene turno asignado el 01/01 y no puede cubrir la noche del 31/12.`;
+ if(day==='01E'&&(assignments['31']?.night===name)) return `${name} cubre la noche del 31/12 y debe descansar el 01/01, tanto de día como de noche.`;
+ return '';
+}
+function allowedStaffFor(day,key){
+ const base=key==='day'?staff:staff.filter(p=>p.night);
+ return base.filter(p=>!assignmentConflict(day,key,p.name));
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(assignments));}catch(_){}}
+function setMessage(msg,isError=false){messageEl.textContent=msg;messageEl.style.color=isError?'#c2413b':'#18794e';}
+function currentEvent(){return events.find(e=>e.day===eventSelect.value);}
+function renderAssignments(){
+ const tbody=document.getElementById('assignmentRows');tbody.innerHTML='';
+ events.forEach(e=>{
+  const tr=document.createElement('tr');
+  const td=document.createElement('td');
+  td.innerHTML=`<strong>${e.date}</strong><br>${escapeHtml(e.name)}<br><span style="font-size:12px;color:#64748b">${escapeHtml(e.type)}</span>`;
+  tr.appendChild(td);
+  [['day','Diurno'],['night','Nocturno']].forEach(([key,label])=>{
+   const cell=document.createElement('td');
+   if(key==='cnda'){cell.classList.add('col-cnda');
+    const val=assignments[e.day][key];
+    cell.innerHTML=val?`<span class="assigned">${escapeHtml(val)}</span>`:`<span class="pending">Pendiente</span>`;
+   }else{
+    const sel=document.createElement('select');sel.setAttribute('aria-label',`${label} ${e.date}`);
+    const empty=document.createElement('option');empty.value='';empty.textContent='Pendiente';sel.appendChild(empty);
+    let allowed=allowedStaffFor(e.day,key);
+    // Mantener visible la asignación actual aunque una edición previa haya generado un conflicto,
+    // para que el usuario pueda corregirla manualmente.
+    const currentName=assignments[e.day][key];
+    if(currentName&&!allowed.some(p=>p.name===currentName)){
+     const currentPerson=staff.find(p=>p.name===currentName);
+     if(currentPerson)allowed=[...allowed,currentPerson];
+    }
+    allowed.forEach(p=>{const o=document.createElement('option');o.value=p.name;o.textContent=p.name;paintAnalyst(o,p.name);sel.appendChild(o);});
+    sel.value=assignments[e.day][key]||'';
+    paintAnalyst(sel,sel.value,{'border-radius':'8px'});
+    sel.addEventListener('change',()=>{
+     const conflict=assignmentConflict(e.day,key,sel.value);
+     if(conflict){alert(`Validación de descanso: ${conflict}`);renderAssignments();return;}
+     assignments[e.day][key]=sel.value;persist();renderAssignments();
+    });
+    cell.appendChild(sel);
+    const printValue=document.createElement('span');printValue.className='print-value';printValue.style.display='none';printValue.textContent=sel.value||'Pendiente';paintAnalyst(printValue,sel.value,{padding:'4px 8px','border-radius':'6px'});cell.appendChild(printValue);
+   }
+   tr.appendChild(cell);
+  });
+  tbody.appendChild(tr);
+ });
+}
+const dateTicker=document.getElementById('dateTicker');
+const dateSub=document.getElementById('dateSub');
+const dateStatus=document.getElementById('dateStatus');
+const dateMonitor=document.getElementById('dateMonitor');
+const shiftTicker=document.getElementById('shiftTicker');
+const shiftSub=document.getElementById('shiftSub');
+const shiftStatus=document.getElementById('shiftStatus');
+const shiftMonitor=document.getElementById('shiftMonitor');
+const startAllBtn=document.getElementById('startAll');
+let selectedEvent=null,selectedShift=null,phaseRunning=false;
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function animateMonitor({monitor,ticker,sub,status,options,format,finalValue,finalDescription}){
+ return new Promise(resolve=>{
+  const duration=5000,start=performance.now();
+  monitor.classList.remove('is-winner');monitor.classList.add('is-running');
+  status.textContent='SORTEANDO';
+  function tick(){
+   const progress=Math.min(1,(performance.now()-start)/duration);
+   ticker.textContent=format(options[Math.floor(Math.random()*options.length)]);
+   sub.textContent='Selección aleatoria';
+   if(progress>=1){
+    ticker.textContent=format(finalValue);sub.textContent=finalDescription;
+    status.textContent='CONFIRMADO';
+    monitor.classList.remove('is-running');monitor.classList.add('is-winner');
+    resolve();return;
+   }
+   setTimeout(tick,65+Math.pow(progress,2.4)*260);
+  }
+  tick();
+ });
+}
+function personOptionsFor(shift,day){
+ const key=shift==='Diurno'?'day':'night';
+ // Se permiten varios turnos diurnos en distintas fechas; solo se excluyen conflictos de descanso.
+ return allowedStaffFor(day,key);
+}
+function syncPhaseButtons(){
+ // La interfaz utiliza exclusivamente el botón general; no hay controles por fase.
+ startAllBtn.disabled=phaseRunning;
+ startAllBtn.textContent=phaseRunning?'Sorteo en curso…':'Ejecutar sorteo completo';
+}
+function resetLaterPhases(){
+ selectedShift=null;
+ shiftMonitor.classList.remove('is-winner');
+ shiftTicker.textContent='TURNO';shiftSub.textContent='Se sorteará después';shiftStatus.textContent='EN ESPERA';
+ ticker.classList.remove('is-winner');tickerName.textContent='PERSONA';tickerSub.textContent='Se sorteará al final';tickerCounter.textContent='EN ESPERA';
+}
+async function doDrawDate(){
+ const openEvents=events.filter(e=>!assignments[e.day].day||!assignments[e.day].night);
+ if(!openEvents.length){setMessage('Todas las fechas ya tienen ambos turnos asignados.',true);return false;}
+ const chosen=openEvents[Math.floor(Math.random()*openEvents.length)];
+ await animateMonitor({monitor:dateMonitor,ticker:dateTicker,sub:dateSub,status:dateStatus,options:openEvents,format:e=>e.date,finalValue:chosen,finalDescription:chosen.name});
+ selectedEvent=chosen;eventSelect.value=chosen.day;resetLaterPhases();
+ setMessage(`Fecha seleccionada: ${chosen.date} · ${chosen.name}. Ahora sortea el turno.`);
+ syncPhaseButtons();return true;
+}
+async function doDrawShift(){
+ if(!selectedEvent){setMessage('Primero debes sortear una fecha.',true);return false;}
+ const openShifts=['Diurno','Nocturno'].filter(sh=>!assignments[selectedEvent.day][sh==='Diurno'?'day':'night']);
+ if(!openShifts.length){setMessage('La fecha seleccionada ya no tiene turnos pendientes. Sortea otra fecha.',true);selectedEvent=null;syncPhaseButtons();return false;}
+ const chosen=openShifts[Math.floor(Math.random()*openShifts.length)];
+ await animateMonitor({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,options:openShifts,format:v=>v,finalValue:chosen,finalDescription:`Turno para ${selectedEvent.date}`});
+ selectedShift=chosen;shiftSelect.value=chosen;
+ setMessage(`Turno seleccionado: ${chosen} para ${selectedEvent.date}. Ahora sortea la persona.`);
+ syncPhaseButtons();return true;
+}
+async function doDrawPerson(){
+ if(!selectedEvent||!selectedShift){setMessage('Primero debes sortear la fecha y el turno.',true);return false;}
+ const key=selectedShift==='Diurno'?'day':'night';
+ if(assignments[selectedEvent.day][key]){setMessage('Ese turno ya tiene una persona asignada. Sortea otra fecha.',true);selectedEvent=null;selectedShift=null;syncPhaseButtons();return false;}
+ const options=personOptionsFor(selectedShift,selectedEvent.day);
+ if(!options.length){setMessage('No hay personal elegible para este turno por las reglas de descanso.',true);return false;}
+ const person=options[Math.floor(Math.random()*options.length)];
+ await animateMonitor({monitor:document.getElementById('tickerMonitor'),ticker:tickerName,sub:tickerSub,status:tickerCounter,options,format:p=>p.name,finalValue:person,finalDescription:`${selectedEvent.date} · ${selectedShift}`});
+ const conflict=assignmentConflict(selectedEvent.day,key,person.name);
+ if(conflict){setMessage(conflict,true);return false;}
+ assignments[selectedEvent.day][key]=person.name;persist();renderAssignments();
+ tickerName.textContent=person.name; tickerSub.textContent=`${selectedEvent.date} · ${selectedShift}`;
+ winnerEl.textContent=person.name;metaEl.textContent=`${selectedEvent.date} · ${selectedEvent.name} · CNDF ${selectedShift}`;
+ setMessage(`Asignación guardada: ${selectedEvent.date} · ${selectedShift} · ${person.name}.`);
+ selectedEvent=null;selectedShift=null;syncPhaseButtons();
+ dateMonitor.classList.remove('is-winner');dateStatus.textContent='EN ESPERA';dateTicker.textContent='FECHA';dateSub.textContent='Se sorteará primero';
+ shiftMonitor.classList.remove('is-winner');shiftStatus.textContent='EN ESPERA';shiftTicker.textContent='TURNO';shiftSub.textContent='Se sorteará después';
+ ticker.classList.remove('is-winner');tickerCounter.textContent='EN ESPERA';tickerName.textContent='PERSONA';tickerSub.textContent='Se sorteará al final';
+ return true;
+}
+async function withPhaseLock(fn){
+ if(phaseRunning)return;
+ phaseRunning=true;syncPhaseButtons();
+ try{await fn();}catch(err){console.error(err);setMessage('Ocurrió un error durante el sorteo. Revisa la consola del navegador.',true);}
+ finally{phaseRunning=false;syncPhaseButtons();}
+}
+async function runAll(){
+ if(phaseRunning)return;
+ phaseRunning=true;syncPhaseButtons();
+ try{
+  // Elegir primero una combinación válida completa evita que el flujo se detenga
+  // entre fecha/turno y la selección más importante: la persona.
+  const combinations=[];
+  events.forEach(e=>{
+   [['Diurno','day'],['Nocturno','night']].forEach(([label,key])=>{
+    if(assignments[e.day][key])return;
+    const people=personOptionsFor(label,e.day);
+    if(people.length) combinations.push({event:e,shift:label,key,people});
+   });
+  });
+  if(!combinations.length){setMessage('No hay turnos pendientes con personal elegible. Revisa las asignaciones existentes.',true);return;}
+  const combo=combinations[Math.floor(Math.random()*combinations.length)];
+  selectedEvent=combo.event;selectedShift=combo.shift;
+  eventSelect.value=combo.event.day;shiftSelect.value=combo.shift;
+  resetLaterPhases();syncPhaseButtons();
+  await animateMonitor({monitor:dateMonitor,ticker:dateTicker,sub:dateSub,status:dateStatus,options:events.filter(e=>!assignments[e.day].day||!assignments[e.day].night),format:e=>e.date,finalValue:combo.event,finalDescription:combo.event.name});
+  dateMonitor.classList.add('is-winner');
+  await animateMonitor({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,options:['Diurno','Nocturno'],format:v=>v,finalValue:combo.shift,finalDescription:`Turno para ${combo.event.date}`});
+  const person=combo.people[Math.floor(Math.random()*combo.people.length)];
+  await animateMonitor({monitor:document.getElementById('tickerMonitor'),ticker:tickerName,sub:tickerSub,status:tickerCounter,options:combo.people,format:p=>p.name,finalValue:person,finalDescription:`${combo.event.date} · ${combo.shift}`});
+  const conflict=assignmentConflict(combo.event.day,combo.key,person.name);
+  if(conflict){setMessage(conflict,true);return;}
+  assignments[combo.event.day][combo.key]=person.name;persist();renderAssignments();
+  tickerName.textContent=person.name; tickerSub.textContent=`${combo.event.date} · ${combo.shift}`;
+  ticker.classList.remove('is-running');ticker.classList.add('is-winner');tickerCounter.textContent='ASIGNADO';
+  winnerEl.textContent=person.name;metaEl.textContent=`${combo.event.date} · ${combo.event.name} · CNDF ${combo.shift}`;
+  setMessage(`Asignación guardada: ${combo.event.date} · ${combo.shift} · ${person.name}.`);
+  selectedEvent=null;selectedShift=null;
+  dateStatus.textContent='COMPLETADO';shiftStatus.textContent='COMPLETADO';tickerCounter.textContent='ASIGNADO';
+ }catch(err){console.error(err);setMessage('Ocurrió un error durante el sorteo. Revisa la consola del navegador.',true);}
+ finally{phaseRunning=false;syncPhaseButtons();}
+}
+startAllBtn.addEventListener('click',runAll);
+syncPhaseButtons();
+document.getElementById('clearList').addEventListener('click',()=>{
+ if(phaseRunning){setMessage('Espera a que termine el sorteo antes de limpiar el listado.',true);return;}
+ if(!confirm('¿Deseas limpiar todas las asignaciones? Todos los turnos volverán a Pendiente.'))return;
+ assignments=freshAssignments();
+ try{localStorage.removeItem(KEY);}catch(_){}
+ selectedEvent=null;selectedShift=null;selectedWinner=null;
+ eventSelect.selectedIndex=0;shiftSelect.selectedIndex=0;
+ dateMonitor.classList.remove('is-running','is-winner');dateTicker.textContent='FECHA';dateSub.textContent='Se sorteará primero';dateStatus.textContent='EN ESPERA';
+ shiftMonitor.classList.remove('is-running','is-winner');shiftTicker.textContent='TURNO';shiftSub.textContent='Se sorteará después';shiftStatus.textContent='EN ESPERA';
+ ticker.classList.remove('is-running','is-winner');tickerName.textContent='PERSONA';tickerSub.textContent='Se sorteará al final';tickerCounter.textContent='EN ESPERA';
+ winnerEl.textContent='Listo para sortear';metaEl.textContent='Selecciona una fecha y un turno.';
+ setMessage('Listado limpiado. Todos los turnos están pendientes.');
+ renderAssignments();syncPhaseButtons();
+});
+document.getElementById('print').addEventListener('click',()=>{renderAssignments();window.print();});
+renderAssignments();
+})();
+</script>
+<script>
+(function(){
+  const body=document.body;
+  const btn=document.getElementById('themeToggle');
+  const icon=document.getElementById('themeIcon');
+  if(!btn||!icon)return;
+  const sun='<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>';
+  const moon='<path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.6 8.6 0 1 0 20.2 15.4Z"/>';
+  let saved='dark';
+  try{saved=localStorage.getItem('sorteoUMOITheme')||'dark';}catch(e){}
+  function setTheme(theme){
+    body.setAttribute('data-theme',theme);
+    const isDark=theme==='dark';
+    icon.innerHTML=isDark?sun:moon;
+    btn.setAttribute('aria-label',isDark?'Cambiar a modo claro':'Cambiar a modo oscuro');
+    btn.setAttribute('title',isDark?'Cambiar a modo claro':'Cambiar a modo oscuro');
+    try{localStorage.setItem('sorteoUMOITheme',theme);}catch(e){}
+  }
+  setTheme(saved==='light'?'light':'dark');
+  btn.addEventListener('click',function(){setTheme(body.getAttribute('data-theme')==='dark'?'light':'dark');});
+})();
+</script>
+</body>
+</html>
