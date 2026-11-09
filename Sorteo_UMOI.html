@@ -580,6 +580,58 @@ body[data-theme="light"] .toast{color:#18794e!important}
 body[data-theme="light"] footer,body[data-theme="light"] .note{color:#617184!important}
 @media print{.theme-toggle{display:none!important}}
 
+
+/* Leyendas grandes en los bombos de fecha y turno */
+#dateTicker,#shiftTicker{font-size:clamp(36px,5vw,76px)!important;line-height:1.05!important;letter-spacing:-.01em!important;font-weight:900!important;white-space:nowrap}
+@media(max-width:520px){#dateTicker,#shiftTicker{font-size:58px!important}}
+/* Ventanas informativas */
+.modal-backdrop{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,10,18,.78)}
+.modal-backdrop[hidden]{display:none!important}
+.modal{width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#0d2235;color:#edf4fa;border:1px solid #2d8a9c;border-top:4px solid #4fc4d0;padding:26px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.modal-wide{width:min(900px,100%)}
+.modal-title{justify-content:center;text-align:center;font-size:1.45rem!important;letter-spacing:.06em;margin:0 0 18px!important;color:#fff!important}
+.modal-title:before{display:none!important}
+.rules-list{margin:0 0 22px;padding-left:26px;display:grid;gap:10px;line-height:1.5;font-size:15px}
+.rules-list li::marker{font-weight:900;color:#4fc4d0}
+.modal-primary,.modal-secondary{border-radius:0!important;font-weight:800;cursor:pointer;padding:12px 18px;font-size:14px}
+.modal-primary{background:#176b82;color:#fff;border:1px solid #2d8a9c}
+.modal-primary:hover{background:#1c7f96}
+#goodLuck{display:block;width:100%;min-height:54px;font-size:18px;letter-spacing:.1em}
+.modal-secondary{background:#172d40;color:#dce9f3;border:1px solid #3a5368}
+.modal-secondary:disabled{opacity:.4;cursor:not-allowed}
+.modal-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.modal-tabs button{flex:1 1 200px;padding:11px 12px;background:#102b40;color:#b9d8ec;border:1px solid #36536a;border-radius:0;font-weight:800;cursor:pointer}
+.modal-tabs button.active{background:#176b82;color:#fff;border-color:#4fc4d0}
+.modal-intro{margin:0 0 14px;line-height:1.55}
+.modal-table-wrap{overflow-x:auto}
+.modal-table{width:100%;min-width:0;border-collapse:collapse;font-size:14px}
+.modal-table th{background:#12314a;color:#b9d8ec;text-transform:uppercase;font-size:11px;letter-spacing:.08em;padding:11px 12px;text-align:left}
+.modal-table td{padding:11px 12px;border-bottom:1px solid #263e52;vertical-align:middle}
+.modal-table td small{color:#b7c8d7}
+.analyst-chip{display:inline-block;padding:5px 10px}
+.modal-footer{display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+.modal-footer #pageIndicator{flex:1;text-align:center;color:#b2c2d1;font-size:13px}
+body[data-theme="light"] .modal{background:#fff;color:#182638;border-color:#c6d2df;border-top-color:#176b82}
+body[data-theme="light"] .modal-title{color:#12304b!important}
+body[data-theme="light"] .modal-tabs button{background:#e8eef5;color:#12304b;border-color:#c6d2df}
+body[data-theme="light"] .modal-tabs button.active{background:#176b82;color:#fff;border-color:#176b82}
+body[data-theme="light"] .modal-table th{background:#e5edf5;color:#12304b}
+body[data-theme="light"] .modal-table td{border-bottom-color:#e0e7ef}
+body[data-theme="light"] .modal-table td small,body[data-theme="light"] .modal-footer #pageIndicator{color:#617184}
+body[data-theme="light"] .modal-secondary{background:#e8eef5;color:#12304b;border-color:#c6d2df}
+#showFinal[hidden]{display:none!important}
+.modal-table th{background:#12314a!important;color:#b9d8ec!important;border:0!important}
+.modal-table tr,.modal-table tr:hover,.modal-table tr:hover td{background:transparent!important}
+.modal-table td{color:inherit!important}
+.modal-tabs button{background:#102b40!important;color:#b9d8ec!important;border:1px solid #36536a!important}
+.modal-tabs button.active{background:#176b82!important;color:#fff!important;border-color:#4fc4d0!important}
+.modal-secondary{background:#172d40!important;color:#dce9f3!important;border:1px solid #3a5368!important}
+.modal-primary{background:#176b82!important;color:#fff!important;border:1px solid #2d8a9c!important}
+body[data-theme="light"] .modal-table th{background:#e5edf5!important;color:#12304b!important}
+body[data-theme="light"] .modal-tabs button{background:#e8eef5!important;color:#12304b!important;border-color:#c6d2df!important}
+body[data-theme="light"] .modal-tabs button.active{background:#176b82!important;color:#fff!important;border-color:#176b82!important}
+body[data-theme="light"] .modal-secondary{background:#e8eef5!important;color:#12304b!important;border-color:#c6d2df!important}
+@media print{.modal-backdrop{display:none!important}}
 </style>
 </head>
 <body>
@@ -612,7 +664,8 @@ body[data-theme="light"] footer,body[data-theme="light"] .note{color:#617184!imp
           </div>
         </div>
         
-        <button type="button" class="primary no-print" id="startAll">Ejecutar sorteo completo</button>
+        <button type="button" class="primary no-print" id="startAll">INICIAR SORTEO</button>
+        <div id="message" class="toast" role="status"></div>
       <div class="hidden-controls" aria-hidden="true">
         <select id="event">
           <option value="07">07 dic</option><option value="08">08 dic</option>
@@ -624,22 +677,7 @@ body[data-theme="light"] footer,body[data-theme="light"] .note{color:#617184!imp
       </div>
       </div>
     </section>
-    <section class="card result-card">
-      <h2>Resultado del sorteo</h2>
-      <div class="result" aria-live="polite">
-        <div class="small">PERSONA SELECCIONADA</div>
-        <strong id="winner">Listo para sortear</strong>
-        <p id="winnerMeta">Selecciona una fecha y un turno.</p>
-      </div>
-      <div id="message" class="toast" role="status"></div>
-      <div class="result-details">
-        <div class="detail-label">Restricciones del personal</div>
-        <div class="rule"><strong>Solo turno diurno</strong><span>JOSUE ORTEGA · KEVIN SILVA</span></div>
-        <div class="rule"><strong>Diurno y nocturno</strong><span>OSNEILLING RAMIREZ · LUIS MORENO · JOSUE PEREZ · OSCAR HIDALGO</span></div>
-        <div class="rule"><strong>Reglas de descanso</strong><span>Nadie cubre diurno y nocturno el mismo día · Noche 07/12 → libre el 08/12 · Noche 08/12 → libre el 09/12 · Noche 24/12 → libre el 25/12 y sin noche el 31/12 (sí puede diurno) · Noche 31/12 → libre el 01/01</span></div>
-      </div>
-      <div class="result-tip">El resultado se registra automáticamente al terminar cada giro.</div>
-    </section>
+    
   </div>
   <section class="card assignments-card">
       <div class="assignments-heading">
@@ -649,6 +687,7 @@ body[data-theme="light"] footer,body[data-theme="light"] .note{color:#617184!imp
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5h-2"/><path d="M6 14h12v8H6z"/></svg>
             Imprimir listado en PDF
           </button>
+          <button class="print-btn" id="showFinal" type="button" hidden>Ver resultados finales</button>
           <button class="clear-list-btn" id="clearList" type="button" aria-label="Limpiar todas las asignaciones">Limpiar listado</button>
         </div>
       </div>
@@ -663,6 +702,51 @@ body[data-theme="light"] footer,body[data-theme="light"] .note{color:#617184!imp
   </section>
 </main>
 <footer>Planificación de cobertura · Diciembre 2026</footer>
+<div class="modal-backdrop" id="rulesModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <h2 id="rulesTitle" class="modal-title">CONDICIONES DEL SORTEO</h2>
+    <ol class="rules-list">
+      <li>El sorteo se realiza en tres bombos: <b>Bombo 1</b> elige la fecha, <b>Bombo 2</b> el turno y <b>Bombo 3</b> el analista.</li>
+      <li>Nadie puede cubrir el turno diurno y el nocturno el mismo día.</li>
+      <li>Quien cubre el turno nocturno del <b>07/12</b> no puede cubrir ningún turno el <b>08/12</b>.</li>
+      <li>Quien cubre el turno nocturno del <b>08/12</b> no puede cubrir ningún turno el <b>09/12</b>.</li>
+      <li>Quien cubre el turno nocturno del <b>24/12</b> no puede cubrir ningún turno el <b>25/12</b>.</li>
+      <li>Quien cubre el turno nocturno del <b>24/12</b> no puede cubrir el turno nocturno del <b>31/12</b>, pero sí el diurno.</li>
+      <li>Quien cubre el turno nocturno del <b>31/12</b> no puede cubrir ningún turno el <b>01/01</b>.</li>
+      <li><b>JOSUE ORTEGA</b> y <b>KEVIN SILVA</b> solo cubren turnos diurnos, por lo que están exentos de los nocturnos del 24/12 y del 31/12.</li>
+      <li>Si solo queda una fecha o un turno disponible, se asigna directamente, sin animación.</li>
+    </ol>
+    <button type="button" class="modal-primary" id="goodLuck">MUCHA SUERTE</button>
+  </div>
+</div>
+<div class="modal-backdrop" id="finalModal" hidden>
+  <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="finalTitle">
+    <h2 id="finalTitle" class="modal-title">RESULTADOS DEL SORTEO 2026</h2>
+    <div class="modal-tabs" role="tablist">
+      <button type="button" role="tab" data-page="1">1 · Listado de fechas y asignaciones</button>
+      <button type="button" role="tab" data-page="2">2 · Reglas para 2027</button>
+    </div>
+    <div class="modal-page" data-page="1">
+      <div class="modal-table-wrap"><table class="modal-table">
+        <thead><tr><th>Fecha / evento</th><th>Diurno</th><th>Nocturno</th></tr></thead>
+        <tbody id="finalRows"></tbody>
+      </table></div>
+    </div>
+    <div class="modal-page" data-page="2" hidden>
+      <p class="modal-intro">Los analistas que cubrieron los turnos <b>nocturnos del 24/12 y del 31/12 de 2026</b> quedan exentos de realizar turnos nocturnos en esas mismas fechas en 2027.</p>
+      <div class="modal-table-wrap"><table class="modal-table">
+        <thead><tr><th>Analista</th><th>Turno cubierto en 2026</th><th>Regla para 2027</th></tr></thead>
+        <tbody id="nextYearRows"></tbody>
+      </table></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-secondary" id="pagePrev">‹ Anterior</button>
+      <span id="pageIndicator">Página 1 de 2</span>
+      <button type="button" class="modal-secondary" id="pageNext">Siguiente ›</button>
+      <button type="button" class="modal-primary" id="finalClose">Cerrar</button>
+    </div>
+  </div>
+</div>
 <script>
 (() => {
 'use strict';
@@ -700,8 +784,8 @@ const spinBtn=document.getElementById('spin');
 const eventSelect=document.getElementById('event');
 const shiftSelect=document.getElementById('shift');
 const durationSelect=document.getElementById('duration');
-const winnerEl=document.getElementById('winner');
-const metaEl=document.getElementById('winnerMeta');
+const winnerEl=document.getElementById('winner')||{};
+const metaEl=document.getElementById('winnerMeta')||{};
 const messageEl=document.getElementById('message');
 const ticker=document.getElementById('tickerMonitor');
 const tickerName=document.getElementById('tickerName');
@@ -779,6 +863,7 @@ function renderAssignments(){
      const conflict=assignmentConflict(e.day,key,sel.value);
      if(conflict){alert(`Validación de descanso: ${conflict}`);renderAssignments();return;}
      assignments[e.day][key]=sel.value;persist();renderAssignments();
+     if(sel.value&&allAssigned())openFinalModal();
     });
     cell.appendChild(sel);
     const printValue=document.createElement('span');printValue.className='print-value';printValue.style.display='none';printValue.textContent=sel.value||'Pendiente';paintAnalyst(printValue,sel.value,{padding:'4px 8px','border-radius':'6px'});cell.appendChild(printValue);
@@ -787,6 +872,7 @@ function renderAssignments(){
   });
   tbody.appendChild(tr);
  });
+ const sf=document.getElementById('showFinal');if(sf)sf.hidden=!allAssigned();
 }
 const dateTicker=document.getElementById('dateTicker');
 const dateSub=document.getElementById('dateSub');
@@ -827,7 +913,7 @@ function personOptionsFor(shift,day){
 function syncPhaseButtons(){
  // La interfaz utiliza exclusivamente el botón general; no hay controles por fase.
  startAllBtn.disabled=phaseRunning;
- startAllBtn.textContent=phaseRunning?'Sorteo en curso…':'Ejecutar sorteo completo';
+ startAllBtn.textContent=phaseRunning?'SORTEO EN CURSO…':'INICIAR SORTEO';
 }
 function resetLaterPhases(){
  selectedShift=null;
@@ -880,43 +966,143 @@ async function withPhaseLock(fn){
  try{await fn();}catch(err){console.error(err);setMessage('Ocurrió un error durante el sorteo. Revisa la consola del navegador.',true);}
  finally{phaseRunning=false;syncPhaseButtons();}
 }
+function allAssigned(){return events.every(e=>assignments[e.day].day&&assignments[e.day].night);}
+// Comprueba que los turnos pendientes aún puedan completarse respetando todas las reglas,
+// para que el sorteo nunca quede bloqueado en una fecha sin analista elegible.
+function canComplete(budget={n:0}){
+ const open=[];
+ events.forEach(e=>['day','night'].forEach(k=>{if(!assignments[e.day][k])open.push({day:e.day,key:k});}));
+ if(!open.length)return true;
+ let best=null,bestOpts=null;
+ for(const slot of open){
+  const opts=allowedStaffFor(slot.day,slot.key);
+  if(!opts.length)return false;
+  if(!bestOpts||opts.length<bestOpts.length){best=slot;bestOpts=opts;}
+ }
+ for(const p of bestOpts){
+  if(++budget.n>20000)return true; // límite de seguridad
+  assignments[best.day][best.key]=p.name;
+  const ok=canComplete(budget);
+  assignments[best.day][best.key]='';
+  if(ok)return true;
+ }
+ return false;
+}
+function feasibleWith(day,key,name){
+ assignments[day][key]=name;
+ const ok=canComplete();
+ assignments[day][key]='';
+ return ok;
+}
+// Muestra un resultado directo (sin animación) cuando solo existe una opción posible.
+function showDirect({monitor,ticker,sub,status,text,description}){
+ monitor.classList.remove('is-running');monitor.classList.add('is-winner');
+ ticker.textContent=text;sub.textContent=description;status.textContent='CONFIRMADO';
+ return wait(700);
+}
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 async function runAll(){
  if(phaseRunning)return;
  phaseRunning=true;syncPhaseButtons();
  try{
-  // Elegir primero una combinación válida completa evita que el flujo se detenga
-  // entre fecha/turno y la selección más importante: la persona.
   const combinations=[];
   events.forEach(e=>{
    [['Diurno','day'],['Nocturno','night']].forEach(([label,key])=>{
     if(assignments[e.day][key])return;
-    const people=personOptionsFor(label,e.day);
+    let people=personOptionsFor(label,e.day);
+    const viable=people.filter(p=>feasibleWith(e.day,key,p.name));
+    if(viable.length)people=viable;
     if(people.length) combinations.push({event:e,shift:label,key,people});
    });
   });
   if(!combinations.length){setMessage('No hay turnos pendientes con personal elegible. Revisa las asignaciones existentes.',true);return;}
-  const combo=combinations[Math.floor(Math.random()*combinations.length)];
+  // Bombo 1: fechas con al menos un turno disponible.
+  const availEvents=events.filter(e=>combinations.some(c=>c.event===e));
+  const event=pick(availEvents);
+  // Bombo 2: turnos disponibles para la fecha elegida.
+  const eventCombos=combinations.filter(c=>c.event===event);
+  const combo=pick(eventCombos);
   selectedEvent=combo.event;selectedShift=combo.shift;
   eventSelect.value=combo.event.day;shiftSelect.value=combo.shift;
+  dateMonitor.classList.remove('is-winner');
   resetLaterPhases();syncPhaseButtons();
-  await animateMonitor({monitor:dateMonitor,ticker:dateTicker,sub:dateSub,status:dateStatus,options:events.filter(e=>!assignments[e.day].day||!assignments[e.day].night),format:e=>e.date,finalValue:combo.event,finalDescription:combo.event.name});
+  if(availEvents.length===1){
+   await showDirect({monitor:dateMonitor,ticker:dateTicker,sub:dateSub,status:dateStatus,text:event.date,description:`${event.name} · única fecha disponible`});
+  }else{
+   await animateMonitor({monitor:dateMonitor,ticker:dateTicker,sub:dateSub,status:dateStatus,options:availEvents,format:e=>e.date,finalValue:event,finalDescription:event.name});
+  }
   dateMonitor.classList.add('is-winner');
-  await animateMonitor({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,options:['Diurno','Nocturno'],format:v=>v,finalValue:combo.shift,finalDescription:`Turno para ${combo.event.date}`});
-  const person=combo.people[Math.floor(Math.random()*combo.people.length)];
-  await animateMonitor({monitor:document.getElementById('tickerMonitor'),ticker:tickerName,sub:tickerSub,status:tickerCounter,options:combo.people,format:p=>p.name,finalValue:person,finalDescription:`${combo.event.date} · ${combo.shift}`});
-  const conflict=assignmentConflict(combo.event.day,combo.key,person.name);
+  if(eventCombos.length===1){
+   await showDirect({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,text:combo.shift,description:`Único turno disponible · ${event.date}`});
+  }else{
+   await animateMonitor({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,options:eventCombos.map(c=>c.shift),format:v=>v,finalValue:combo.shift,finalDescription:`Turno para ${event.date}`});
+  }
+  // Bombo 3: analista.
+  const person=pick(combo.people);
+  await animateMonitor({monitor:document.getElementById('tickerMonitor'),ticker:tickerName,sub:tickerSub,status:tickerCounter,options:combo.people,format:p=>p.name,finalValue:person,finalDescription:`${event.date} · ${combo.shift}`});
+  const conflict=assignmentConflict(event.day,combo.key,person.name);
   if(conflict){setMessage(conflict,true);return;}
-  assignments[combo.event.day][combo.key]=person.name;persist();renderAssignments();
-  tickerName.textContent=person.name; tickerSub.textContent=`${combo.event.date} · ${combo.shift}`;
-  ticker.classList.remove('is-running');ticker.classList.add('is-winner');tickerCounter.textContent='ASIGNADO';
-  winnerEl.textContent=person.name;metaEl.textContent=`${combo.event.date} · ${combo.event.name} · CNDF ${combo.shift}`;
-  setMessage(`Asignación guardada: ${combo.event.date} · ${combo.shift} · ${person.name}.`);
+  assignments[event.day][combo.key]=person.name;persist();renderAssignments();
+  tickerName.textContent=person.name; tickerSub.textContent=`${event.date} · ${combo.shift}`;
+  ticker.classList.remove('is-running');ticker.classList.add('is-winner');
+  setMessage(`Asignación guardada: ${event.date} · ${combo.shift} · ${person.name}.`);
   selectedEvent=null;selectedShift=null;
   dateStatus.textContent='COMPLETADO';shiftStatus.textContent='COMPLETADO';tickerCounter.textContent='ASIGNADO';
+  if(allAssigned()){setMessage('¡Sorteo completado! Todas las fechas tienen sus turnos asignados.');setTimeout(openFinalModal,1200);}
  }catch(err){console.error(err);setMessage('Ocurrió un error durante el sorteo. Revisa la consola del navegador.',true);}
  finally{phaseRunning=false;syncPhaseButtons();}
 }
-startAllBtn.addEventListener('click',runAll);
+// ----- Ventana de condiciones -----
+const rulesModal=document.getElementById('rulesModal');
+startAllBtn.addEventListener('click',()=>{
+ if(phaseRunning)return;
+ if(allAssigned()){setMessage('Todas las fechas ya tienen sus turnos asignados.');openFinalModal();return;}
+ rulesModal.hidden=false;document.getElementById('goodLuck').focus();
+});
+document.getElementById('goodLuck').addEventListener('click',()=>{rulesModal.hidden=true;runAll();});
+// ----- Ventana de resultados finales (2 páginas) -----
+const finalModal=document.getElementById('finalModal');
+let finalPage=1;
+function chip(name){
+ if(!name)return document.createTextNode('Pendiente');
+ const sp=document.createElement('span');sp.className='analyst-chip';sp.textContent=name;
+ paintAnalyst(sp,name);return sp;
+}
+function showFinalPage(n){
+ finalPage=n;
+ finalModal.querySelectorAll('.modal-page').forEach(pg=>pg.hidden=pg.dataset.page!==String(n));
+ finalModal.querySelectorAll('.modal-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.page===String(n)));
+ document.getElementById('pageIndicator').textContent=`Página ${n} de 2`;
+ document.getElementById('pagePrev').disabled=n===1;
+ document.getElementById('pageNext').disabled=n===2;
+}
+function openFinalModal(){
+ const rows=document.getElementById('finalRows');rows.innerHTML='';
+ events.forEach(e=>{
+  const tr=document.createElement('tr');
+  const td=document.createElement('td');td.innerHTML=`<strong>${e.date}</strong><br>${escapeHtml(e.name)}<br><small>${escapeHtml(e.type)}</small>`;tr.appendChild(td);
+  ['day','night'].forEach(k=>{const c=document.createElement('td');c.appendChild(chip(assignments[e.day][k]));tr.appendChild(c);});
+  rows.appendChild(tr);
+ });
+ const next=document.getElementById('nextYearRows');next.innerHTML='';
+ const byName={};
+ [['24','24/12'],['31','31/12']].forEach(([d,label])=>{const n=assignments[d].night;if(n)(byName[n]=byName[n]||[]).push(label);});
+ Object.keys(byName).forEach(name=>{
+  const tr=document.createElement('tr');
+  const a=document.createElement('td');a.appendChild(chip(name));tr.appendChild(a);
+  const b=document.createElement('td');b.textContent='Nocturno '+byName[name].map(x=>x+'/2026').join(' y ');tr.appendChild(b);
+  const c=document.createElement('td');c.innerHTML=`<b>No puede hacer turno nocturno el 24/12/2027 ni el 31/12/2027.</b>`;tr.appendChild(c);
+  next.appendChild(tr);
+ });
+ if(!next.children.length)next.innerHTML='<tr><td colspan="3">Aún no hay analistas asignados a los nocturnos del 24/12 y 31/12.</td></tr>';
+ showFinalPage(1);finalModal.hidden=false;
+}
+finalModal.querySelectorAll('.modal-tabs button').forEach(b=>b.addEventListener('click',()=>showFinalPage(Number(b.dataset.page))));
+document.getElementById('pagePrev').addEventListener('click',()=>showFinalPage(1));
+document.getElementById('pageNext').addEventListener('click',()=>showFinalPage(2));
+document.getElementById('finalClose').addEventListener('click',()=>{finalModal.hidden=true;});
+document.getElementById('showFinal').addEventListener('click',openFinalModal);
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!finalModal.hidden)finalModal.hidden=true;});
 syncPhaseButtons();
 document.getElementById('clearList').addEventListener('click',()=>{
  if(phaseRunning){setMessage('Espera a que termine el sorteo antes de limpiar el listado.',true);return;}
