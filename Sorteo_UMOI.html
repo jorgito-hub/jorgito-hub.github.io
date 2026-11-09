@@ -636,7 +636,7 @@ body[data-theme="light"] footer,body[data-theme="light"] .note{color:#617184!imp
         <div class="detail-label">Restricciones del personal</div>
         <div class="rule"><strong>Solo turno diurno</strong><span>JOSUE ORTEGA · KEVIN SILVA</span></div>
         <div class="rule"><strong>Diurno y nocturno</strong><span>OSNEILLING RAMIREZ · LUIS MORENO · JOSUE PEREZ · OSCAR HIDALGO</span></div>
-        <div class="rule"><strong>Reglas de descanso</strong><span>Nadie cubre diurno y nocturno el mismo día · Noche 07/12 → libre el 08/12 · Noche 08/12 → libre el 09/12 · Noche 24/12 → libre el 25/12 y el 31/12 · Noche 31/12 → libre el 01/01</span></div>
+        <div class="rule"><strong>Reglas de descanso</strong><span>Nadie cubre diurno y nocturno el mismo día · Noche 07/12 → libre el 08/12 · Noche 08/12 → libre el 09/12 · Noche 24/12 → libre el 25/12 y sin noche el 31/12 (sí puede diurno) · Noche 31/12 → libre el 01/01</span></div>
       </div>
       <div class="result-tip">El resultado se registra automáticamente al terminar cada giro.</div>
     </section>
@@ -716,13 +716,14 @@ function eligible(shift){return staff.filter(p=>p[shift==='Diurno'?'day':'night'
 // cubrir NINGÚN turno de la segunda fecha):
 //  07/12 noche -> descanso todo el 08/12
 //  08/12 noche -> descanso todo el 09/12 (aplica si 09/12 se agrega al calendario)
-//  24/12 noche -> descanso todo el 25/12 y todo el 31/12
+//  24/12 noche -> descanso todo el 25/12; el 31/12 solo puede cubrir el diurno
 //  31/12 noche -> descanso todo el 01/01
-const restAfterNight=[['07','08'],['08','09'],['24','25'],['24','31'],['31','01E']];
+// Tercer elemento opcional: turnos bloqueados en la segunda fecha (por defecto, ambos).
+const restAfterNight=[['07','08'],['08','09'],['24','25'],['24','31',['night']],['31','01E']];
 // Personal exento de turnos nocturnos el 24/12 y el 31/12.
 const nightExempt={'24':['JOSUE ORTEGA','KEVIN SILVA'],'31':['JOSUE ORTEGA','KEVIN SILVA']};
 function dateLabel(day){const e=events.find(x=>x.day===day);return e?e.date:(day==='09'?'09/12':day);}
-function hasAnyShift(day,name){const a=assignments[day];return !!a&&(a.day===name||a.night===name);}
+function hasAnyShift(day,name,keys=['day','night']){const a=assignments[day];return !!a&&keys.some(k=>a[k]===name);}
 function assignmentConflict(day,key,name){
  if(!name)return '';
  const shiftName=key==='day'?'diurno':'nocturno';
@@ -732,9 +733,11 @@ function assignmentConflict(day,key,name){
  // Regla d: exentos de nocturno el 24/12 y el 31/12.
  if(key==='night'&&(nightExempt[day]||[]).includes(name)) return `${name} está exento de turnos nocturnos el ${dateLabel(day)}.`;
  // Reglas a, b, c y f: descanso completo el día siguiente indicado.
- for(const [nightDay,restDay] of restAfterNight){
-  if(key==='night'&&day===nightDay&&hasAnyShift(restDay,name)) return `${name} tiene turno asignado el ${dateLabel(restDay)} y no puede cubrir la noche del ${dateLabel(nightDay)}, porque debe descansar todo el ${dateLabel(restDay)}.`;
-  if(day===restDay&&assignments[nightDay]?.night===name) return `${name} cubre la noche del ${dateLabel(nightDay)} y debe descansar el ${dateLabel(restDay)}, tanto de día como de noche.`;
+ for(const [nightDay,restDay,blocked=['day','night']] of restAfterNight){
+  const full=blocked.length===2;
+  const restTxt=full?`todo el ${dateLabel(restDay)}`:`el turno nocturno del ${dateLabel(restDay)}`;
+  if(key==='night'&&day===nightDay&&hasAnyShift(restDay,name,blocked)) return `${name} tiene ${full?'turno asignado el '+dateLabel(restDay):'asignada la noche del '+dateLabel(restDay)} y no puede cubrir la noche del ${dateLabel(nightDay)}, porque no puede cubrir ${restTxt}.`;
+  if(day===restDay&&blocked.includes(key)&&assignments[nightDay]?.night===name) return `${name} cubre la noche del ${dateLabel(nightDay)} y no puede cubrir ${restTxt}${full?', ni de día ni de noche':''}.`;
  }
  return '';
 }
