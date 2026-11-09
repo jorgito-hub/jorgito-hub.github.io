@@ -6436,6 +6436,20 @@ function sanitizarNombreArchivo(str) {
 // Construye los datos de una Llave de Turno (metadata + payload completo de
 // localStorage) sin descargarla todavía. Se reutiliza tanto para la entrega
 // normal/forzada manual como para la captura automática al cierre inesperado.
+// 🔐 Solo los datos de SiCheck viajan en la llave. Todas las páginas HTML
+// abiertas desde el disco (file://) comparten el mismo almacenamiento del
+// navegador: sin este filtro, los datos de OTRAS aplicaciones (p. ej. fotos)
+// se copiaban de equipo en equipo con cada llave hasta llenarlo.
+const CLAVES_LLAVE_SICHECK = [
+  "novedadesTI_v1", "novedadesEliminadasTI_v1", "comentariosEliminadosTI_v1",
+  "reportesMonitoreoTI_v1", "pendientesTI_v1", "eventosLlaveTI_v1",
+  "checklistLogTI_v1", "soc_dashboard_data",
+  "statExpiracion", "informeTurnoDescargadoHasta", "entregaLlaveHecha", "sesionActiva"
+];
+function esClaveDeLlaveSiCheck(k) {
+  return CLAVES_LLAVE_SICHECK.includes(k) || k.startsWith("check_bloqueado_") || k.startsWith("contador_");
+}
+
 function construirDatosLlaveTurno(forzada) {
   if (!window.usuarioSeleccionado || typeof obtenerLimitesTurno !== "function") return null;
 
@@ -6457,7 +6471,7 @@ function construirDatosLlaveTurno(forzada) {
   const payload = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    payload[key] = localStorage.getItem(key);
+    if (esClaveDeLlaveSiCheck(key)) payload[key] = localStorage.getItem(key);
   }
   // ☕ El conteo de pausa activa y el reporte en curso son personales: no viajan en la llave.
   Object.keys(payload).forEach(k => {
@@ -6728,6 +6742,8 @@ function recibirLlaveDeTurno(inputFile) {
 
         Object.keys(payload).forEach(k => {
           if (k === CLAVE_NOVEDADES || k === CLAVE_ELIMINADAS || k === CLAVE_COMENTARIOS_ELIMINADOS) return; // se procesan aparte, en orden
+          // 🔐 Datos ajenos a SiCheck (llaves viejas los traían): se ignoran.
+          if (!esClaveDeLlaveSiCheck(k)) return;
           // ☕ El conteo de pausa activa es personal de cada analista: nunca
           // se toma de la llave de otro.
           if (k.startsWith("ultima_pausa_activa") || k.startsWith("pausa_") || k === "rptEnCursoTI" || k === "rptBorradorTI") return;
