@@ -631,6 +631,18 @@ body[data-theme="light"] .modal-table th{background:#e5edf5!important;color:#123
 body[data-theme="light"] .modal-tabs button{background:#e8eef5!important;color:#12304b!important;border-color:#c6d2df!important}
 body[data-theme="light"] .modal-tabs button.active{background:#176b82!important;color:#fff!important;border-color:#176b82!important}
 body[data-theme="light"] .modal-secondary{background:#e8eef5!important;color:#12304b!important;border-color:#c6d2df!important}
+/* Ventana de resultados compacta: visible completa al 100 % sin barra de desplazamiento */
+.modal-wide{width:min(760px,100%);padding:16px 18px!important}
+.modal-wide .modal-title{font-size:1.1rem!important;margin:0 0 10px!important}
+.modal-wide .modal-tabs{margin-bottom:8px}
+.modal-wide .modal-tabs button{padding:7px 10px;font-size:13px}
+.modal-wide .modal-table{font-size:13px}
+.modal-wide .modal-table th{padding:7px 10px;font-size:10px}
+.modal-wide .modal-table td{padding:6px 10px}
+.modal-wide .analyst-chip{padding:3px 8px;font-size:12px}
+.modal-wide .modal-intro{font-size:13px;margin-bottom:8px}
+.modal-wide .modal-footer{margin-top:10px}
+.modal-wide .modal-primary,.modal-wide .modal-secondary{padding:8px 14px;font-size:13px}
 @media print{.modal-backdrop{display:none!important}}
 </style>
 </head>
@@ -779,6 +791,9 @@ function freshAssignments(){
  return a;
 }
 let assignments=freshAssignments();
+// El sorteo se considera iniciado cuando ya se aceptaron las condiciones o existe alguna asignación.
+let rulesAccepted=false;
+function sorteoIniciado(){return rulesAccepted||events.some(e=>assignments[e.day].day||assignments[e.day].night);}
 try{const stored=localStorage.getItem(KEY);if(stored){const parsed=JSON.parse(stored);if(parsed&&typeof parsed==='object'){events.forEach(e=>{if(parsed[e.day])assignments[e.day]={...assignments[e.day],...parsed[e.day]};});}}}catch(_){}
 const spinBtn=document.getElementById('spin');
 const eventSelect=document.getElementById('event');
@@ -864,6 +879,7 @@ function renderAssignments(){
      if(conflict){alert(`Validación de descanso: ${conflict}`);renderAssignments();return;}
      assignments[e.day][key]=sel.value;persist();renderAssignments();
      if(sel.value&&allAssigned())openFinalModal();
+     syncPhaseButtons();
     });
     cell.appendChild(sel);
     const printValue=document.createElement('span');printValue.className='print-value';printValue.style.display='none';printValue.textContent=sel.value||'Pendiente';paintAnalyst(printValue,sel.value,{padding:'4px 8px','border-radius':'6px'});cell.appendChild(printValue);
@@ -913,7 +929,7 @@ function personOptionsFor(shift,day){
 function syncPhaseButtons(){
  // La interfaz utiliza exclusivamente el botón general; no hay controles por fase.
  startAllBtn.disabled=phaseRunning;
- startAllBtn.textContent=phaseRunning?'SORTEO EN CURSO…':'INICIAR SORTEO';
+ startAllBtn.textContent=phaseRunning?'SORTEO EN CURSO…':(sorteoIniciado()?'CONTINUAR SORTEO':'INICIAR SORTEO');
 }
 function resetLaterPhases(){
  selectedShift=null;
@@ -1057,9 +1073,10 @@ const rulesModal=document.getElementById('rulesModal');
 startAllBtn.addEventListener('click',()=>{
  if(phaseRunning)return;
  if(allAssigned()){setMessage('Todas las fechas ya tienen sus turnos asignados.');openFinalModal();return;}
+ if(sorteoIniciado()){runAll();return;}
  rulesModal.hidden=false;document.getElementById('goodLuck').focus();
 });
-document.getElementById('goodLuck').addEventListener('click',()=>{rulesModal.hidden=true;runAll();});
+document.getElementById('goodLuck').addEventListener('click',()=>{rulesModal.hidden=true;rulesAccepted=true;runAll();});
 // ----- Ventana de resultados finales (2 páginas) -----
 const finalModal=document.getElementById('finalModal');
 let finalPage=1;
@@ -1080,7 +1097,7 @@ function openFinalModal(){
  const rows=document.getElementById('finalRows');rows.innerHTML='';
  events.forEach(e=>{
   const tr=document.createElement('tr');
-  const td=document.createElement('td');td.innerHTML=`<strong>${e.date}</strong><br>${escapeHtml(e.name)}<br><small>${escapeHtml(e.type)}</small>`;tr.appendChild(td);
+  const td=document.createElement('td');td.innerHTML=`<strong>${e.date}</strong> · ${escapeHtml(e.name)}`;tr.appendChild(td);
   ['day','night'].forEach(k=>{const c=document.createElement('td');c.appendChild(chip(assignments[e.day][k]));tr.appendChild(c);});
   rows.appendChild(tr);
  });
@@ -1107,7 +1124,7 @@ syncPhaseButtons();
 document.getElementById('clearList').addEventListener('click',()=>{
  if(phaseRunning){setMessage('Espera a que termine el sorteo antes de limpiar el listado.',true);return;}
  if(!confirm('¿Deseas limpiar todas las asignaciones? Todos los turnos volverán a Pendiente.'))return;
- assignments=freshAssignments();
+ assignments=freshAssignments();rulesAccepted=false;
  try{localStorage.removeItem(KEY);}catch(_){}
  selectedEvent=null;selectedShift=null;selectedWinner=null;
  eventSelect.selectedIndex=0;shiftSelect.selectedIndex=0;
