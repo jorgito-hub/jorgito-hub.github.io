@@ -725,7 +725,7 @@ body[data-theme="light"] .modal-secondary{background:#e8eef5!important;color:#12
       <li>Quien cubre el turno nocturno del <b>24/12</b> no puede cubrir ningún turno el <b>25/12</b>.</li>
       <li>Quien cubre el turno nocturno del <b>24/12</b> no puede cubrir el turno nocturno del <b>31/12</b>, pero sí el diurno.</li>
       <li>Quien cubre el turno nocturno del <b>31/12</b> no puede cubrir ningún turno el <b>01/01</b>.</li>
-      <li><b>JOSUE ORTEGA</b> y <b>KEVIN SILVA</b> solo cubren turnos diurnos, por lo que están exentos de los nocturnos del 24/12 y del 31/12.</li>
+      <li><b>JOSUE ORTEGA</b> y <b>KEVIN SILVA</b> están exentos de los turnos nocturnos del <b>24/12</b> y del <b>31/12</b>. Sí pueden cubrir los nocturnos de las demás fechas.</li>
       <li>Si solo queda una fecha o un turno disponible, se asigna directamente, sin animación.</li>
     </ol>
     <button type="button" class="modal-primary" id="goodLuck">MUCHA SUERTE</button>
@@ -763,11 +763,11 @@ body[data-theme="light"] .modal-secondary{background:#e8eef5!important;color:#12
 (() => {
 'use strict';
 const staff=[
- {name:'JOSUE ORTEGA',day:true,night:false,color:'#1d4ed8'},
+ {name:'JOSUE ORTEGA',day:true,night:true,color:'#1d4ed8'},
  {name:'OSNEILLING RAMIREZ',day:true,night:true,color:'#b91c1c'},
  {name:'LUIS MORENO',day:true,night:true,color:'#15803d'},
  {name:'JOSUE PEREZ',day:true,night:true,color:'#7e22ce'},
- {name:'KEVIN SILVA',day:true,night:false,color:'#c2410c'},
+ {name:'KEVIN SILVA',day:true,night:true,color:'#c2410c'},
  {name:'OSCAR HIDALGO',day:true,night:true,color:'#be185d'}
 ];
 // Color característico de cada analista: fondo propio y fuente blanca en negrilla.
