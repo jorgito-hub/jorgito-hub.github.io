@@ -643,6 +643,14 @@ body[data-theme="light"] .modal-secondary{background:#e8eef5!important;color:#12
 .modal-wide .modal-intro{font-size:13px;margin-bottom:8px}
 .modal-wide .modal-footer{margin-top:10px}
 .modal-wide .modal-primary,.modal-wide .modal-secondary{padding:8px 14px;font-size:13px}
+/* Bombo 2: emoji grande y fondo de día / noche */
+#shiftTicker.is-emoji{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif!important;font-size:clamp(70px,8.5vw,120px)!important;line-height:1!important;text-shadow:none!important;animation:none!important;color:inherit!important}
+.draw-monitor .ticker-window.shift-day,body[data-theme="light"] .draw-monitor .ticker-window.shift-day{background:linear-gradient(180deg,#8fd3f7 0%,#c9ecff 100%)!important;border-color:#6bbfe8!important}
+.draw-monitor .ticker-window.shift-night,body[data-theme="light"] .draw-monitor .ticker-window.shift-night{background:linear-gradient(180deg,#06163a 0%,#0d2a5c 100%)!important;border-color:#1d3f7a!important}
+.draw-monitor .ticker-window.shift-day .ticker-sub{color:#0b3a5c!important;font-weight:700!important}
+.draw-monitor .ticker-window.shift-night .ticker-sub{color:#cfe0ff!important;font-weight:700!important}
+.draw-monitor .ticker-window{transition:background .15s}
+@media(max-width:520px){#shiftTicker.is-emoji{font-size:96px!important}}
 @media print{.modal-backdrop{display:none!important}}
 </style>
 </head>
@@ -809,6 +817,19 @@ const tickerCounter=document.getElementById('tickerCounter');
 // Pinta el panel del Bombo 3 con el color del analista que se muestra en cada momento.
 function paintTicker(){paintAnalyst(tickerName,tickerName.textContent.trim(),{display:'inline-block',padding:'6px 14px','border-radius':'10px'});}
 new MutationObserver(paintTicker).observe(tickerName,{childList:true,characterData:true,subtree:true});
+// Bombo 2: el turno se muestra con emoji (☀️ diurno / 🌙 nocturno) y la pantallita toma fondo de día o de noche.
+const SHIFT_EMOJI={Diurno:'☀️',Nocturno:'🌙'};
+function shiftEmoji(v){return SHIFT_EMOJI[v]||v;}
+const shiftTickerEl=document.getElementById('shiftTicker');
+const shiftWindow=shiftTickerEl.closest('.ticker-window');
+function paintShift(){
+ const t=shiftTickerEl.textContent.trim();
+ const mode=t===SHIFT_EMOJI.Diurno?'day':t===SHIFT_EMOJI.Nocturno?'night':'';
+ shiftWindow.classList.toggle('shift-day',mode==='day');
+ shiftWindow.classList.toggle('shift-night',mode==='night');
+ shiftTickerEl.classList.toggle('is-emoji',!!mode);
+}
+new MutationObserver(paintShift).observe(shiftTickerEl,{childList:true,characterData:true,subtree:true});
 let spinning=false,selectedWinner=null,intervalId=null,timeoutId=null;
 function eligible(shift){return staff.filter(p=>p[shift==='Diurno'?'day':'night']);}
 // Reglas de descanso (quien cubre el turno NOCTURNO de la primera fecha no puede
@@ -951,7 +972,7 @@ async function doDrawShift(){
  const openShifts=['Diurno','Nocturno'].filter(sh=>!assignments[selectedEvent.day][sh==='Diurno'?'day':'night']);
  if(!openShifts.length){setMessage('La fecha seleccionada ya no tiene turnos pendientes. Sortea otra fecha.',true);selectedEvent=null;syncPhaseButtons();return false;}
  const chosen=openShifts[Math.floor(Math.random()*openShifts.length)];
- await animateMonitor({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,options:openShifts,format:v=>v,finalValue:chosen,finalDescription:`Turno para ${selectedEvent.date}`});
+ await animateMonitor({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,options:openShifts,format:shiftEmoji,finalValue:chosen,finalDescription:`${chosen} · ${selectedEvent.date}`});
  selectedShift=chosen;shiftSelect.value=chosen;
  setMessage(`Turno seleccionado: ${chosen} para ${selectedEvent.date}. Ahora sortea la persona.`);
  syncPhaseButtons();return true;
@@ -1049,17 +1070,22 @@ async function runAll(){
   }
   dateMonitor.classList.add('is-winner');
   if(eventCombos.length===1){
-   await showDirect({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,text:combo.shift,description:`Único turno disponible · ${event.date}`});
+   await showDirect({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,text:shiftEmoji(combo.shift),description:`${combo.shift} · único turno disponible · ${event.date}`});
   }else{
-   await animateMonitor({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,options:eventCombos.map(c=>c.shift),format:v=>v,finalValue:combo.shift,finalDescription:`Turno para ${event.date}`});
+   await animateMonitor({monitor:shiftMonitor,ticker:shiftTicker,sub:shiftSub,status:shiftStatus,options:eventCombos.map(c=>c.shift),format:shiftEmoji,finalValue:combo.shift,finalDescription:`${combo.shift} · ${event.date}`});
   }
   // Bombo 3: analista.
   const person=pick(combo.people);
-  await animateMonitor({monitor:document.getElementById('tickerMonitor'),ticker:tickerName,sub:tickerSub,status:tickerCounter,options:combo.people,format:p=>p.name,finalValue:person,finalDescription:`${event.date} · ${combo.shift}`});
+  if(combo.people.length===1){
+   await showDirect({monitor:ticker,ticker:tickerName,sub:tickerSub,status:tickerCounter,text:person.name,description:`Único analista disponible · ${event.date} · ${combo.shift}`});
+  }else{
+   await animateMonitor({monitor:ticker,ticker:tickerName,sub:tickerSub,status:tickerCounter,options:combo.people,format:p=>p.name,finalValue:person,finalDescription:`${event.date} · ${combo.shift}`});
+  }
   const conflict=assignmentConflict(event.day,combo.key,person.name);
   if(conflict){setMessage(conflict,true);return;}
   assignments[event.day][combo.key]=person.name;persist();renderAssignments();
-  tickerName.textContent=person.name; tickerSub.textContent=`${event.date} · ${combo.shift}`;
+  tickerName.textContent=person.name;
+  if(combo.people.length>1)tickerSub.textContent=`${event.date} · ${combo.shift}`;
   ticker.classList.remove('is-running');ticker.classList.add('is-winner');
   setMessage(`Asignación guardada: ${event.date} · ${combo.shift} · ${person.name}.`);
   selectedEvent=null;selectedShift=null;
