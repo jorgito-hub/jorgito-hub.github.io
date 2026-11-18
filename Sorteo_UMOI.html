@@ -733,7 +733,7 @@ body[data-theme="light"] .modal-secondary{background:#e8eef5!important;color:#12
       <li>Quien cubre el turno nocturno del <b>24/12</b> no puede cubrir ningún turno el <b>25/12</b>.</li>
       <li>Quien cubre el turno nocturno del <b>24/12</b> no puede cubrir el turno nocturno del <b>31/12</b>, pero sí el diurno.</li>
       <li>Quien cubre el turno nocturno del <b>31/12</b> no puede cubrir ningún turno el <b>01/01</b>.</li>
-      <li><b>JOSUE ORTEGA</b> y <b>KEVIN SILVA</b> están exentos de los turnos nocturnos del <b>24/12</b> y del <b>31/12</b>. Sí pueden cubrir los nocturnos de las demás fechas.</li>
+      <li><b>JOSUE ORTEGA</b> y <b>KEVIN SILVA</b> están exentos de los turnos nocturnos del <b>24/12</b> y del <b>31/12</b>. Sí pueden cubrir los nocturnos de las demás fechas. Esta exención aplica solo al sorteo: en la corrección manual del calendario sí pueden asignarse.</li>
       <li><b>Fechas importantes:</b> 07/12, 24/12, 31/12 y 01/01. Quien tenga cualquier turno el <b>07/12</b> no puede cubrir ningún turno el <b>24/12</b>, <b>31/12</b> ni <b>01/01</b>, y viceversa.</li>
       <li>Si solo queda una fecha, un turno o un analista disponible, se asigna directamente, sin animación.</li>
     </ol>
@@ -849,14 +849,15 @@ const importantExclusive=[['07'],['24','31','01E']];
 const nightExempt={'24':['JOSUE ORTEGA','KEVIN SILVA'],'31':['JOSUE ORTEGA','KEVIN SILVA']};
 function dateLabel(day){const e=events.find(x=>x.day===day);return e?e.date:(day==='09'?'09/12':day);}
 function hasAnyShift(day,name,keys=['day','night']){const a=assignments[day];return !!a&&keys.some(k=>a[k]===name);}
-function assignmentConflict(day,key,name){
+// manual=true: corrección manual en el calendario (no aplica la exención de Josué Ortega y Kevin Silva).
+function assignmentConflict(day,key,name,manual=false){
  if(!name)return '';
  const shiftName=key==='day'?'diurno':'nocturno';
  // Regla e: nadie puede cubrir diurno y nocturno el mismo día.
  const other=key==='day'?'night':'day';
  if(assignments[day]?.[other]===name) return `${name} ya tiene asignado el turno ${other==='day'?'diurno':'nocturno'} del ${dateLabel(day)} y no puede cubrir también el ${shiftName} de esa fecha. Se evita una jornada de 24 horas.`;
  // Regla d: exentos de nocturno el 24/12 y el 31/12.
- if(key==='night'&&(nightExempt[day]||[]).includes(name)) return `${name} está exento de turnos nocturnos el ${dateLabel(day)}.`;
+ if(!manual&&key==='night'&&(nightExempt[day]||[]).includes(name)) return `${name} está exento de turnos nocturnos el ${dateLabel(day)}.`;
  // Regla de fechas importantes: el 07/12 excluye al 24/12, 31/12 y 01/01 (y viceversa), en cualquier turno.
  const grp=importantExclusive.findIndex(g=>g.includes(day));
  if(grp>=0){
@@ -872,9 +873,9 @@ function assignmentConflict(day,key,name){
  }
  return '';
 }
-function allowedStaffFor(day,key){
+function allowedStaffFor(day,key,manual=false){
  const base=key==='day'?staff:staff.filter(p=>p.night);
- return base.filter(p=>!assignmentConflict(day,key,p.name));
+ return base.filter(p=>!assignmentConflict(day,key,p.name,manual));
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(assignments));}catch(_){}}
@@ -895,7 +896,7 @@ function renderAssignments(){
    }else{
     const sel=document.createElement('select');sel.setAttribute('aria-label',`${label} ${e.date}`);
     const empty=document.createElement('option');empty.value='';empty.textContent='Pendiente';sel.appendChild(empty);
-    let allowed=allowedStaffFor(e.day,key);
+    let allowed=allowedStaffFor(e.day,key,true);
     // Mantener visible la asignación actual aunque una edición previa haya generado un conflicto,
     // para que el usuario pueda corregirla manualmente.
     const currentName=assignments[e.day][key];
@@ -907,7 +908,7 @@ function renderAssignments(){
     sel.value=assignments[e.day][key]||'';
     paintAnalyst(sel,sel.value,{'border-radius':'8px'});
     sel.addEventListener('change',()=>{
-     const conflict=assignmentConflict(e.day,key,sel.value);
+     const conflict=assignmentConflict(e.day,key,sel.value,true);
      if(conflict){alert(`Validación de descanso: ${conflict}`);renderAssignments();return;}
      assignments[e.day][key]=sel.value;persist();renderAssignments();
      if(sel.value&&allAssigned())openFinalModal();
