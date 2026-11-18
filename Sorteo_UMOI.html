@@ -703,9 +703,9 @@ body[data-theme="light"] .modal-secondary{background:#e8eef5!important;color:#12
       <div class="assignments-heading">
         <div><h2>Listado de fechas y asignaciones</h2><p>Calendario de cobertura · Fechas de diciembre</p></div>
         <div class="list-toolbar no-print">
-          <button class="print-btn" id="print" aria-label="Imprimir listado de fechas especiales en PDF">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5h-2"/><path d="M6 14h12v8H6z"/></svg>
-            Imprimir listado en PDF
+          <button class="print-btn" id="print" type="button" aria-label="Descargar calendario en PNG y PDF">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            <span id="printLabel">DESCARGAR CALENDARIO</span>
           </button>
           <button class="print-btn" id="showFinal" type="button" hidden>Ver resultados finales</button>
           <button class="clear-list-btn" id="clearList" type="button" aria-label="Limpiar todas las asignaciones">Limpiar listado</button>
@@ -734,7 +734,8 @@ body[data-theme="light"] .modal-secondary{background:#e8eef5!important;color:#12
       <li>Quien cubre el turno nocturno del <b>24/12</b> no puede cubrir el turno nocturno del <b>31/12</b>, pero sí el diurno.</li>
       <li>Quien cubre el turno nocturno del <b>31/12</b> no puede cubrir ningún turno el <b>01/01</b>.</li>
       <li><b>JOSUE ORTEGA</b> y <b>KEVIN SILVA</b> están exentos de los turnos nocturnos del <b>24/12</b> y del <b>31/12</b>. Sí pueden cubrir los nocturnos de las demás fechas.</li>
-      <li>Si solo queda una fecha o un turno disponible, se asigna directamente, sin animación.</li>
+      <li><b>Fechas importantes:</b> 07/12, 24/12, 31/12 y 01/01. Quien tenga cualquier turno el <b>07/12</b> no puede cubrir ningún turno el <b>24/12</b>, <b>31/12</b> ni <b>01/01</b>, y viceversa.</li>
+      <li>Si solo queda una fecha, un turno o un analista disponible, se asigna directamente, sin animación.</li>
     </ol>
     <button type="button" class="modal-primary" id="goodLuck">MUCHA SUERTE</button>
   </div>
@@ -841,6 +842,10 @@ function eligible(shift){return staff.filter(p=>p[shift==='Diurno'?'day':'night'
 // Tercer elemento opcional: turnos bloqueados en la segunda fecha (por defecto, ambos).
 const restAfterNight=[['07','08'],['08','09'],['24','25'],['24','31',['night']],['31','01E']];
 // Personal exento de turnos nocturnos el 24/12 y el 31/12.
+// Fechas importantes: 07/12, 24/12, 31/12 y 01/01.
+// Quien tenga cualquier turno el 07/12 no puede cubrir ningún turno el 24/12, 31/12 ni 01/01, y viceversa.
+const IMPORTANT_DATES=['07','24','31','01E'];
+const importantExclusive=[['07'],['24','31','01E']];
 const nightExempt={'24':['JOSUE ORTEGA','KEVIN SILVA'],'31':['JOSUE ORTEGA','KEVIN SILVA']};
 function dateLabel(day){const e=events.find(x=>x.day===day);return e?e.date:(day==='09'?'09/12':day);}
 function hasAnyShift(day,name,keys=['day','night']){const a=assignments[day];return !!a&&keys.some(k=>a[k]===name);}
@@ -852,6 +857,12 @@ function assignmentConflict(day,key,name){
  if(assignments[day]?.[other]===name) return `${name} ya tiene asignado el turno ${other==='day'?'diurno':'nocturno'} del ${dateLabel(day)} y no puede cubrir también el ${shiftName} de esa fecha. Se evita una jornada de 24 horas.`;
  // Regla d: exentos de nocturno el 24/12 y el 31/12.
  if(key==='night'&&(nightExempt[day]||[]).includes(name)) return `${name} está exento de turnos nocturnos el ${dateLabel(day)}.`;
+ // Regla de fechas importantes: el 07/12 excluye al 24/12, 31/12 y 01/01 (y viceversa), en cualquier turno.
+ const grp=importantExclusive.findIndex(g=>g.includes(day));
+ if(grp>=0){
+  const hit=importantExclusive[1-grp].find(d=>hasAnyShift(d,name));
+  if(hit) return `${name} ya tiene turno el ${dateLabel(hit)} (fecha importante) y no puede cubrir ningún turno el ${dateLabel(day)}.`;
+ }
  // Reglas a, b, c y f: descanso completo el día siguiente indicado.
  for(const [nightDay,restDay,blocked=['day','night']] of restAfterNight){
   const full=blocked.length===2;
@@ -1161,7 +1172,81 @@ document.getElementById('clearList').addEventListener('click',()=>{
  setMessage('Listado limpiado. Todos los turnos están pendientes.');
  renderAssignments();syncPhaseButtons();
 });
-document.getElementById('print').addEventListener('click',()=>{renderAssignments();window.print();});
+// ----- Descarga del calendario: PNG (escala 5) + PDF -----
+// Las librerías se cargan solo al pulsar el botón, para no hacer más pesada la página.
+const EXPORT_LIBS=[
+ 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+ 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+];
+const scriptCache={};
+function loadScript(src){
+ if(!scriptCache[src])scriptCache[src]=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=src;sc.onload=res;sc.onerror=()=>{delete scriptCache[src];rej(new Error('No se pudo cargar '+src));};document.head.appendChild(sc);});
+ return scriptCache[src];
+}
+function buildExportNode(){
+ const wrap=document.createElement('div');
+ wrap.style.cssText='position:fixed;left:-20000px;top:0;width:1100px;padding:36px 40px;background:#ffffff;color:#12304b;font-family:"Segoe UI",Tahoma,Arial,sans-serif';
+ const today=new Date().toLocaleDateString('es-NI',{day:'2-digit',month:'2-digit',year:'numeric'});
+ wrap.innerHTML=`<div style="font-size:12px;letter-spacing:.16em;font-weight:800;color:#176b82">UMOI</div>
+  <div style="font-size:28px;font-weight:800;margin:4px 0 4px">Calendario de cobertura · Fechas especiales 2026</div>
+  <div style="font-size:14px;color:#617184;margin-bottom:20px">Resultado del sorteo · Turnos diurno y nocturno CNDF</div>
+  <table style="width:100%;border-collapse:collapse;font-size:15px">
+   <thead><tr>${['Fecha / evento','Diurno','Nocturno'].map(h=>`<th style="text-align:left;background:#e5edf5;color:#12304b;padding:12px 14px;font-size:12px;letter-spacing:.08em;text-transform:uppercase">${h}</th>`).join('')}</tr></thead>
+   <tbody></tbody></table>
+  <div style="margin-top:16px;font-size:12px;color:#617184">Generado el ${today}</div>`;
+ const tb=wrap.querySelector('tbody');
+ events.forEach((e,i)=>{
+  const tr=document.createElement('tr');tr.style.background=i%2?'#ffffff':'#f5f8fb';
+  const td=document.createElement('td');td.style.cssText='padding:12px 14px;border-bottom:1px solid #e0e7ef';
+  td.innerHTML=`<b>${e.date}</b> · ${escapeHtml(e.name)}<div style="font-size:12px;color:#617184;margin-top:3px">${escapeHtml(e.type)}</div>`;tr.appendChild(td);
+  ['day','night'].forEach(k=>{
+   const c=document.createElement('td');c.style.cssText='padding:12px 14px;border-bottom:1px solid #e0e7ef';
+   const name=assignments[e.day][k];
+   if(name){const sp=document.createElement('span');sp.textContent=name;sp.style.cssText='display:inline-block;padding:6px 12px;font-size:14px';paintAnalyst(sp,name);c.appendChild(sp);}
+   else{c.innerHTML='<span style="color:#7a5700;background:#fff4d6;padding:5px 9px;font-weight:700;font-size:13px">Pendiente</span>';}
+   tr.appendChild(c);
+  });
+  tb.appendChild(tr);
+ });
+ return wrap;
+}
+function triggerDownload(href,filename){const a=document.createElement('a');a.href=href;a.download=filename;document.body.appendChild(a);a.click();a.remove();}
+let exporting=false;
+async function downloadCalendar(){
+ if(exporting)return;
+ exporting=true;
+ const btn=document.getElementById('print'),label=document.getElementById('printLabel');
+ btn.disabled=true;label.textContent='GENERANDO…';
+ const node=buildExportNode();
+ try{
+  await wait(60); // deja que la interfaz muestre el estado antes del trabajo pesado
+  await Promise.all(EXPORT_LIBS.map(loadScript));
+  document.body.appendChild(node);
+  const canvas=await window.html2canvas(node,{scale:5,backgroundColor:'#ffffff',logging:false,useCORS:true});
+  // 1) PNG en escala 5
+  const pngUrl=await new Promise(res=>canvas.toBlob(b=>res(URL.createObjectURL(b)),'image/png'));
+  triggerDownload(pngUrl,'Calendario_UMOI_2026.png');
+  setTimeout(()=>URL.revokeObjectURL(pngUrl),10000);
+  label.textContent='PNG LISTO · PREPARANDO PDF…';
+  await wait(1200); // pausa entre descargas para aligerar el proceso
+  // 2) PDF en A4 horizontal con la misma imagen
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=28;
+  const ratio=Math.min((pw-2*m)/canvas.width,(ph-2*m)/canvas.height);
+  const w=canvas.width*ratio,h=canvas.height*ratio;
+  pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',(pw-w)/2,m,w,h);
+  pdf.save('Calendario_UMOI_2026.pdf');
+  setMessage('Calendario descargado en PNG y PDF.');
+ }catch(err){
+  console.error(err);
+  setMessage('No se pudieron generar los archivos (se requiere conexión a internet). Se abrirá la impresión para guardar en PDF.',true);
+  renderAssignments();window.print();
+ }finally{
+  node.remove();exporting=false;btn.disabled=false;label.textContent='DESCARGAR CALENDARIO';
+ }
+}
+document.getElementById('print').addEventListener('click',downloadCalendar);
 renderAssignments();
 })();
 </script>
