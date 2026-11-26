@@ -16,7 +16,9 @@
     --title: #1f3b7a;
     --cell: #fbfcfe;
     --cell-we: #f3f5f9;
-    --day: #e8a800;
+    --day: #8ed1f5;
+    --sun: #ffc400;
+    --moon: #ffd54a;
     --night: #14234f;
     --off: #eef0f4;
     --bad: #c62828;
@@ -34,7 +36,9 @@
       --title: #b9cbff;
       --cell: #1b212c;
       --cell-we: #1e2531;
-      --day: #d99a00;
+      --day: #7cc6ee;
+      --sun: #ffc400;
+      --moon: #ffd54a;
       --night: #233a85;
       --off: #222a36;
       --bad: #ff8a80;
@@ -52,7 +56,9 @@
     --title: #b9cbff;
     --cell: #1b212c;
     --cell-we: #1e2531;
-    --day: #d99a00;
+    --day: #7cc6ee;
+    --sun: #ffc400;
+    --moon: #ffd54a;
     --night: #233a85;
     --off: #222a36;
     --bad: #ff8a80;
@@ -118,7 +124,9 @@
   .sheet-sub { font-size: 1.05rem; color: var(--muted); margin-top: 6px; }
   .pills { display: flex; flex-wrap: wrap; gap: 10px; }
   .pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 9px; font-weight: 700; font-size: .9rem; color: #fff; }
-  .pill.d { background: var(--day); text-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
+  .pill.d { background: var(--day); color: #000; }
+  .pill.d .pico { color: var(--sun); }
+  .pill.n .pico { color: var(--moon); }
   .pill.n { background: var(--night); }
   .pico { display: inline-flex; width: 18px; height: 18px; }
   .pico svg { width: 100%; height: 100%; }
@@ -142,7 +150,15 @@
   .empty-msg { font-size: .75rem; color: var(--muted); font-style: italic; }
 
   .sh { border-radius: 8px; padding: 6px 7px; color: #fff; font-weight: 700; display: flex; align-items: stretch; gap: 7px; }
-  .sh.d { background: var(--day); text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+  .sh.d { background: var(--day); color: #000; }
+  .sh.d .ico { color: var(--sun); border-right-color: rgba(0, 0, 0, .22); }
+  .sh.n .ico { color: var(--moon); }
+  .sh.d .p select, .sh.d .p .name { color: #000; }
+  .sh.d .p select:focus-visible { outline-color: #000; }
+  .sh.d .p.edited select { text-decoration-color: rgba(0, 0, 0, .7); }
+  .sh.d .ctl { color: #000; background: rgba(0, 0, 0, .1); }
+  .sh.d .ctl:hover { background: rgba(0, 0, 0, .2); }
+  .sh.d .ctl.add { background: transparent; border-color: rgba(0, 0, 0, .55); }
   .sh.n { background: var(--night); }
   /* Símbolo a la izquierda: tan alto como la lista de nombres (1, 2 o 3 filas) */
   .ico {
@@ -158,7 +174,7 @@
   .p select, .p .name {
     font: inherit; font-weight: 800; color: #fff; background: transparent; border: 0; padding: 0;
     min-width: 0; flex: 1; cursor: pointer; appearance: none; -webkit-appearance: none;
-    text-shadow: inherit; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
+    text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
   }
   .p select option { color: #1d2330; background: #fff; text-shadow: none; font-weight: 600; }
   .p select:focus-visible { outline: 2px solid #fff; outline-offset: 1px; border-radius: 3px; }
@@ -203,7 +219,7 @@
   .progress-card h3 { margin: 0 0 4px; font-size: 1.05rem; }
   .progress-card p { margin: 0 0 14px; font-size: .85rem; color: var(--muted); }
   .track { height: 10px; border-radius: 99px; background: var(--off); overflow: hidden; }
-  .track i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--day), #f5c400); border-radius: 99px; transition: width .25s ease; }
+  .track i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--night), var(--day)); border-radius: 99px; transition: width .25s ease; }
   .pct { margin-top: 8px; font-size: .8rem; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 
   /* Pantallas medianas: la hoja conserva su ancho y se desplaza en horizontal para no cortar nombres. */
@@ -440,8 +456,8 @@ function validate(shift, prev, wd) {
 const dot = p => `<i class="dot" style="background:${COLORS[p] || "#9aa3b5"}"></i>`;
 
 // Símbolos de turno (SVG para que se vean nítidos a cualquier tamaño y en el PNG).
-const SUN = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9" fill="#fff"/><g stroke="#fff" stroke-width="3.6" stroke-linecap="round"><path d="M24 4v6M24 38v6M4 24h6M38 24h6M9.9 9.9l4.2 4.2M33.9 33.9l4.2 4.2M9.9 38.1l4.2-4.2M33.9 14.1l4.2-4.2"/></g></svg>`;
-const MOON = `<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#fff" d="M30.5 5.5A19 19 0 1 0 42.5 33 15.5 15.5 0 0 1 30.5 5.5z"/><circle cx="36" cy="12" r="1.8" fill="#fff" opacity=".85"/><circle cx="41" cy="20" r="1.2" fill="#fff" opacity=".7"/></svg>`;
+const SUN = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9" fill="currentColor" stroke="#e09a00" stroke-width="1.2"/><g stroke="currentColor" stroke-width="3.6" stroke-linecap="round"><path d="M24 4v6M24 38v6M4 24h6M38 24h6M9.9 9.9l4.2 4.2M33.9 33.9l4.2 4.2M9.9 38.1l4.2-4.2M33.9 14.1l4.2-4.2"/></g></svg>`;
+const MOON = `<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M30.5 5.5A19 19 0 1 0 42.5 33 15.5 15.5 0 0 1 30.5 5.5z"/><circle cx="36" cy="12" r="1.8" fill="currentColor" opacity=".85"/><circle cx="41" cy="20" r="1.2" fill="currentColor" opacity=".7"/></svg>`;
 
 function personHTML(iso, kind, k, value, list, edited, extra) {
   const opts = ALL.map(p => `<option value="${p}"${p === value ? " selected" : ""}>${p}</option>`).join("");
