@@ -385,22 +385,40 @@ const PROPOSALS = {
   },
   4: {
     title: "Propuesta 4 — Fechas especiales, patrón de 5 y KEVIN fijo",
-    desc: "Prioridad 1: en las fechas especiales se asignan obligatoriamente los analistas del sorteo. Prioridad 2: los demás turnos siguen el patrón RAFAEL → LUIS → OSNEILING → OSCAR → ARIEL, turno tras turno (primero el día y luego la noche de cada fecha). Prioridad 3: KEVIN hace el lunes de noche y de miércoles a viernes de día (con un segundo analista del patrón). Si al que le toca según el patrón no puede (trabaja en una fecha especial cercana o sale de noche), pasa el siguiente y él conserva su lugar para el próximo turno. Quien trabaja una fecha especial cuenta ese turno como su vuelta del patrón, así los turnos quedan parejos.",
+    desc: "Prioridad 1: en las fechas especiales se asignan obligatoriamente los analistas del sorteo. Prioridad 2: los demás turnos siguen el patrón RAFAEL → LUIS → OSNEILING → OSCAR → ARIEL, turno tras turno (primero el día y luego la noche de cada fecha). Prioridad 3: KEVIN hace el lunes de noche y de miércoles a viernes de día (con un segundo analista del patrón). Si al que le toca según el patrón no puede (trabaja en una fecha especial cercana o sale de noche), pasa el siguiente y él conserva su lugar para el próximo turno. Quien trabaja una fecha especial cuenta ese turno como su vuelta del patrón, así los turnos quedan parejos. Descanso: nunca 2 noches seguidas; después de una noche, la siguiente noche es como mínimo 3 días después (lunes noche → jueves noche) y, si se puede, los 2 días siguientes quedan libres.",
     pattern: "Patrón: <code>RAFAEL → LUIS → OSNEILING → OSCAR → ARIEL</code> · KEVIN: <code>lunes noche</code> · <code>mié–vie día</code> · Fechas especiales: <code>07/12</code> <code>08/12</code> <code>24/12</code> <code>25/12</code> <code>31/12</code> <code>01/01</code>",
     foot: "Patrón: RAFAEL → LUIS → OSNEILING → OSCAR → ARIEL · KEVIN: lunes de noche y miércoles a viernes de día · ★ Fecha especial",
     build(n, start) {
       const PATTERN = ["RAFAEL", "LUIS", "OSNEILING", "OSCAR", "ARIEL"];
       const kevinDay = wd => [3, 4, 5].includes(wd);
       let queue = PATTERN.slice();
-      const take = ok => {
-        const p = queue.find(ok) || queue.find(x => ok.loose(x)) || queue[0];
+      // Se prueba de la regla más estricta a la más flexible; dentro de cada nivel manda el orden del patrón.
+      // Equilibrio suave: dentro del mes, nadie toma un turno si ya lleva 2 más que el que menos lleva.
+      let monthKey = null, cnt = {};
+      const fair = p => cnt[p] <= Math.min(...PATTERN.map(x => cnt[x])) + 1;
+      const take = (tiers, keep) => {
+        const all = tiers.flatMap(ok => [p => ok(p) && fair(p), ok]);
+        // keep(p): además, que elegir a p no deje sin opción con descanso completo al turno de noche de ese día.
+        const p = (keep && all.reduce((found, ok) => found || queue.find(x => ok(x) && keep(x)), null)) ||
+          all.reduce((found, ok) => found || queue.find(ok), null) || queue[0];
         queue = queue.filter(x => x !== p).concat(p);
+        cnt[p]++;
         return p;
       };
       const out = [];
       for (let i = 0; i < n; i++) {
         const date = addDays(start, i);
         const wd = date.getDay();
+        const mk = date.getFullYear() * 12 + date.getMonth();
+        if (mk !== monthKey) {
+          // Los turnos obligatorios del mes se cuentan de antemano.
+          monthKey = mk;
+          cnt = Object.fromEntries(PATTERN.map(p => [p, 0]));
+          for (let d = new Date(date.getFullYear(), date.getMonth(), 1); d.getMonth() === date.getMonth(); d = addDays(d, 1)) {
+            const x = SPECIAL[toISO(d)];
+            if (x) x.day.concat(x.night).forEach(p => { if (p in cnt) cnt[p]++; });
+          }
+        }
         const sp = SPECIAL[toISO(date)];
         if (sp) {
           // Prioridad 1: turnos del sorteo. Quien trabaja aquí cuenta su vuelta del patrón.
@@ -408,17 +426,22 @@ const PROPOSALS = {
           out.push({ day: sp.day.slice(), night: sp.night.slice() });
           continue;
         }
-        const prev = out[i - 1];
-        const tomorrow = SPECIAL[toISO(addDays(date, 1))];
+        const prev = out[i - 1], prev2 = out[i - 2];
+        const sp1 = SPECIAL[toISO(addDays(date, 1))], sp2 = SPECIAL[toISO(addDays(date, 2))];
         const day = kevinDay(wd) ? ["KEVIN"] : [];
         const night = wd === 1 ? ["KEVIN"] : [];
         const busy = p => day.includes(p) || night.includes(p);
-        const dayOk = Object.assign(p => !busy(p) && !(prev && prev.night.includes(p)), { loose: p => !busy(p) });
-        day.push(take(dayOk));
-        if (!night.length) {
-          const nightOk = Object.assign(p => !busy(p) && !(tomorrow && tomorrow.day.includes(p)), { loose: p => !busy(p) });
-          night.push(take(nightOk));
-        }
+        const nightBefore = (s, p) => s && s.night.includes(p);
+        // Descanso: tras una noche no se entra de día al día siguiente, no hay otra noche en los 2 días
+        // siguientes y, si se puede, esos 2 días quedan libres por completo.
+        const dayStrict = p => !busy(p) && !nightBefore(prev, p);
+        const dayRest = p => dayStrict(p) && !nightBefore(prev2, p);
+        const nightStrict = p => !busy(p) && !nightBefore(prev, p) && !nightBefore(prev2, p) &&
+          !(sp1 && (sp1.day.includes(p) || sp1.night.includes(p))) && !(sp2 && sp2.night.includes(p));
+        const nightRest = p => nightStrict(p) && !(sp2 && sp2.day.includes(p));
+        const leavesNight = night.length ? null : p => queue.some(x => x !== p && nightRest(x));
+        day.push(take([dayRest, dayStrict, p => !busy(p)], leavesNight));
+        if (!night.length) night.push(take([nightRest, nightStrict, p => !busy(p)]));
         out.push({ day, night });
       }
       return out;
@@ -490,13 +513,13 @@ function monthData() {
     const shift = idx >= 0 ? sched[idx] : null;
     rows.push({
       date, inMonth: date.getMonth() === m - 1, shift,
-      warn: shift ? validate(shift, idx > 0 ? sched[idx - 1] : null, date) : []
+      warn: shift ? validate(shift, idx > 0 ? sched[idx - 1] : null, date, idx > 1 ? sched[idx - 2] : null) : []
     });
   }
   return { first, rows };
 }
 
-function validate(shift, prev, date) {
+function validate(shift, prev, date, prev2) {
   const wd = date.getDay();
   const w = [];
   if (state.p === 4) {
@@ -508,6 +531,10 @@ function validate(shift, prev, date) {
   const all = shift.day.concat(shift.night);
   all.forEach((p, i) => { if (all.indexOf(p) !== i) w.push(`${p} tiene dos turnos el mismo día`); });
   if (prev) shift.day.forEach(p => { if (prev.night.includes(p)) w.push(`${p} sale de noche y entra de día`); });
+  shift.night.forEach(p => {
+    if (prev && prev.night.includes(p)) w.push(`${p} tiene 2 noches seguidas`);
+    else if (prev2 && prev2.night.includes(p)) w.push(`${p} repite noche sin 2 días libres`);
+  });
   shift.night.forEach(p => {
     if (nightNotAllowed(p, wd)) w.push(state.p === 2 ? `${p} no hace turno de noche en esta propuesta` : `${p} no puede hacer noche martes, miércoles ni jueves`);
   });
