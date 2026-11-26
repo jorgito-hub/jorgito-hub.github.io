@@ -65,7 +65,7 @@
     color: var(--text);
     font: 15px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
   }
-  main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; }
+  main { max-width: 1480px; margin: 0 auto; padding: 24px 16px 48px; }
   .app-title { font-size: 1.35rem; font-weight: 700; margin: 0 0 4px; }
   .lead { color: var(--muted); margin: 0 0 18px; }
 
@@ -120,6 +120,8 @@
   .pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 9px; font-weight: 700; font-size: .9rem; color: #fff; }
   .pill.d { background: var(--day); text-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
   .pill.n { background: var(--night); }
+  .pico { display: inline-flex; width: 18px; height: 18px; }
+  .pico svg { width: 100%; height: 100%; }
 
   .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
   .dow {
@@ -139,11 +141,19 @@
   .num .wd { display: none; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: capitalize; }
   .empty-msg { font-size: .75rem; color: var(--muted); font-style: italic; }
 
-  .sh { border-radius: 8px; padding: 6px 7px 7px; color: #fff; font-weight: 700; display: flex; flex-direction: column; gap: 3px; }
+  .sh { border-radius: 8px; padding: 6px 7px; color: #fff; font-weight: 700; display: flex; align-items: stretch; gap: 7px; }
   .sh.d { background: var(--day); text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
   .sh.n { background: var(--night); }
-  .sh .t { font-size: .66rem; letter-spacing: .8px; opacity: .92; }
-  .p { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: .86rem; line-height: 1.2; }
+  /* Símbolo a la izquierda: tan alto como la lista de nombres (1, 2 o 3 filas) */
+  .ico {
+    flex: none; display: flex; align-items: center; justify-content: center;
+    width: min(38px, calc(var(--n, 1) * 18px)); padding-right: 7px; border-right: 1px solid rgba(255, 255, 255, .35);
+    box-sizing: content-box;
+  }
+  .ico svg { width: 100%; height: 100%; max-height: 38px; display: block; }
+  .names { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+  .p { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: clamp(.68rem, .45rem + .3vw, .9rem); line-height: 1.2; position: relative; }
+  .acts { display: flex; gap: 3px; flex: none; }
   .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(255, 255, 255, .9); }
   .p select, .p .name {
     font: inherit; font-weight: 800; color: #fff; background: transparent; border: 0; padding: 0;
@@ -158,14 +168,14 @@
     background: rgba(255, 255, 255, .18); border: 0; border-radius: 5px; padding: 3px 5px; text-shadow: none;
   }
   .ctl:hover { background: rgba(255, 255, 255, .34); }
-  .ctl.add {
-    align-self: flex-start; margin-top: 2px; padding: 3px 8px; font-size: .68rem; letter-spacing: .3px;
-    background: transparent; border: 1px dashed rgba(255, 255, 255, .7);
-  }
+  .ctl.add { padding: 2px 5px; background: transparent; border: 1px dashed rgba(255, 255, 255, .75); }
   .ctl.add:hover { background: rgba(255, 255, 255, .18); }
+  /* Con mouse: los botones aparecen sobre el nombre al pasar por el día y no le quitan espacio. */
   @media (hover: hover) {
-    .cell .ctl { opacity: 0; transition: opacity .15s; }
-    .cell:hover .ctl, .cell:focus-within .ctl { opacity: 1; }
+    .acts { position: absolute; right: -3px; top: 50%; transform: translateY(-50%); padding: 1px 2px; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+    .sh.d .acts { background: var(--day); }
+    .sh.n .acts { background: var(--night); }
+    .cell:hover .acts, .cell:focus-within .acts { opacity: 1; pointer-events: auto; }
   }
   .warn-msg { font-size: .7rem; color: var(--bad); line-height: 1.25; font-weight: 600; }
   .sheet-foot { margin-top: 16px; font-size: .8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 24px; justify-content: space-between; }
@@ -196,6 +206,12 @@
   .track i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--day), #f5c400); border-radius: 99px; transition: width .25s ease; }
   .pct { margin-top: 8px; font-size: .8rem; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 
+  /* Pantallas medianas: la hoja conserva su ancho y se desplaza en horizontal para no cortar nombres. */
+  @media (min-width: 761px) and (max-width: 1259px) {
+    .sheet-wrap { overflow-x: auto; margin-bottom: 14px; border-radius: 14px; }
+    .sheet-wrap .sheet { min-width: 1300px; margin-bottom: 0; }
+    .p { font-size: .72rem; }
+  }
   @media (max-width: 760px) {
     .sheet { padding: 18px 14px; }
     .sheet-head h1 { font-size: 1.7rem; }
@@ -241,9 +257,10 @@
     <p class="pattern" id="p-pattern"></p>
   </section>
 
-  <p class="hint">Toca un nombre para cambiarlo. Con <b>+ Agregar</b> sumas un analista al turno y con <b>✕</b> lo quitas (máximo 3 por turno). Las horas se recalculan al instante y los cambios se guardan en este navegador.</p>
+  <p class="hint">Toca un nombre para cambiarlo. Con <b>+</b> sumas un analista al turno y con <b>✕</b> lo quitas (máximo 3 por turno). Las horas se recalculan al instante y los cambios se guardan en este navegador.</p>
   <p class="status"><span id="status"></span> <button type="button" id="reset" class="link" hidden>Restablecer patrón</button></p>
 
+  <div class="sheet-wrap">
   <section class="sheet" id="sheet">
     <div class="sheet-head">
       <div>
@@ -251,13 +268,14 @@
         <div class="sheet-sub" id="sheet-sub"></div>
       </div>
       <div class="pills">
-        <span class="pill d">☀ Día · 08:00 – 16:00</span>
-        <span class="pill n">☾ Noche · 16:00 – 08:00</span>
+        <span class="pill d"><span class="pico"></span>Día · 08:00 – 16:00</span>
+        <span class="pill n"><span class="pico"></span>Noche · 16:00 – 08:00</span>
       </div>
     </div>
     <div class="grid" id="grid"></div>
     <div class="sheet-foot"><span id="foot-pattern"></span><span>Día 8 h · Noche 16 h</span></div>
   </section>
+  </div>
 
   <section class="card">
     <h2 id="sum-title">Resumen del mes</h2>
@@ -421,17 +439,22 @@ function validate(shift, prev, wd) {
 
 const dot = p => `<i class="dot" style="background:${COLORS[p] || "#9aa3b5"}"></i>`;
 
-function personHTML(iso, kind, k, value, list, edited) {
+// Símbolos de turno (SVG para que se vean nítidos a cualquier tamaño y en el PNG).
+const SUN = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9" fill="#fff"/><g stroke="#fff" stroke-width="3.6" stroke-linecap="round"><path d="M24 4v6M24 38v6M4 24h6M38 24h6M9.9 9.9l4.2 4.2M33.9 33.9l4.2 4.2M9.9 38.1l4.2-4.2M33.9 14.1l4.2-4.2"/></g></svg>`;
+const MOON = `<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#fff" d="M30.5 5.5A19 19 0 1 0 42.5 33 15.5 15.5 0 0 1 30.5 5.5z"/><circle cx="36" cy="12" r="1.8" fill="#fff" opacity=".85"/><circle cx="41" cy="20" r="1.2" fill="#fff" opacity=".7"/></svg>`;
+
+function personHTML(iso, kind, k, value, list, edited, extra) {
   const opts = ALL.map(p => `<option value="${p}"${p === value ? " selected" : ""}>${p}</option>`).join("");
   const del = list.length > 1 ? `<button type="button" class="ctl del" data-act="del" data-iso="${iso}" data-kind="${kind}" data-k="${k}" title="Quitar a ${value} de este turno" aria-label="Quitar a ${value}">✕</button>` : "";
-  return `<div class="p${edited ? " edited" : ""}">${dot(value)}<select data-iso="${iso}" data-kind="${kind}" data-k="${k}" aria-label="Analista">${opts}</select>${del}</div>`;
+  return `<div class="p${edited ? " edited" : ""}">${dot(value)}<select data-iso="${iso}" data-kind="${kind}" data-k="${k}" aria-label="Analista">${opts}</select>${del || extra ? `<span class="acts">${del}${extra || ""}</span>` : ""}</div>`;
 }
 
 function shiftHTML(iso, kind, list, baseList) {
   const edited = !same(list, baseList);
-  const people = list.map((p, k) => personHTML(iso, kind, k, p, list, edited && baseList[k] !== p)).join("");
-  const add = list.length < MAX_PER_SHIFT ? `<button type="button" class="ctl add" data-act="add" data-iso="${iso}" data-kind="${kind}">+ Agregar</button>` : "";
-  return `<div class="sh ${kind === "day" ? "d" : "n"}"><span class="t">${kind === "day" ? "☀ DÍA" : "☾ NOCHE"}</span>${people}${add}</div>`;
+  const add = list.length < MAX_PER_SHIFT ? `<button type="button" class="ctl add" data-act="add" data-iso="${iso}" data-kind="${kind}" title="Agregar analista a este turno" aria-label="Agregar analista">+</button>` : "";
+  const people = list.map((p, k) => personHTML(iso, kind, k, p, list, edited && baseList[k] !== p, k === list.length - 1 ? add : "")).join("");
+  const label = kind === "day" ? "Turno de día" : "Turno de noche";
+  return `<div class="sh ${kind === "day" ? "d" : "n"}" title="${label}"><span class="ico" style="--n:${list.length}" aria-label="${label}">${kind === "day" ? SUN : MOON}</span><div class="names">${people}</div></div>`;
 }
 
 const MONTHS_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -598,7 +621,7 @@ function progress(pct, text) {
 $("png").addEventListener("click", async () => {
   const btn = $("png");
   const sheet = $("sheet");
-  const EXPORT_WIDTH = 1240;
+  const EXPORT_WIDTH = 1480;
   btn.disabled = true;
   $("overlay").hidden = false;
   progress(3, "Preparando el calendario");
@@ -615,7 +638,7 @@ $("png").addEventListener("click", async () => {
   const timer = setInterval(() => { pct += (85 - pct) * 0.06; progress(pct, `Dibujando en alta resolución (escala ${scaleTxt})`); }, 120);
   try {
     const canvas = await html2canvas(sheet, {
-      scale, backgroundColor: "#ffffff", useCORS: true, logging: false, windowWidth: 1400,
+      scale, backgroundColor: "#ffffff", useCORS: true, logging: false, windowWidth: 1600,
       onclone(doc) {
         doc.documentElement.setAttribute("data-theme", "light");
         const s = doc.getElementById("sheet");
@@ -627,7 +650,8 @@ $("png").addEventListener("click", async () => {
           span.textContent = sel.value;
           sel.replaceWith(span);
         });
-        s.querySelectorAll(".ctl, .warn-msg").forEach(el => el.remove());
+        s.querySelectorAll(".acts, .warn-msg").forEach(el => el.remove());
+        s.querySelectorAll(".p").forEach(el => { el.style.fontSize = "15px"; });
         s.querySelectorAll(".cell").forEach(el => el.classList.remove("today", "warn"));
         s.querySelectorAll(".cell.blank").forEach(el => { el.style.visibility = "hidden"; });
         s.querySelectorAll(".p.edited").forEach(el => el.classList.remove("edited"));
@@ -650,6 +674,8 @@ $("png").addEventListener("click", async () => {
   }
 });
 
+document.querySelector(".pill.d .pico").innerHTML = SUN;
+document.querySelector(".pill.n .pico").innerHTML = MOON;
 render();
 </script>
 <!-- html2canvas 1.4.1 (MIT) incluido para que la descarga PNG funcione sin internet -->
