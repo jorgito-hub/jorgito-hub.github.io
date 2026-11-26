@@ -249,7 +249,7 @@
   <p class="lead">Orden de rotación: ARIEL → OSNEILING → RAFAEL → LUIS → OSCAR → KEVIN. Tres propuestas para comparar.</p>
 
   <div class="controls">
-    <label>Inicio de la rotación
+    <label>Inicio de la rotación (de esta propuesta)
       <input type="date" id="start">
     </label>
     <label>Mes a mostrar
@@ -483,6 +483,10 @@ try {
   Object.assign(state, saved);
 } catch (e) {}
 
+// Cada propuesta tiene su propia fecha de inicio. La 4 empieza el lunes 30/11/2026 (primer turno: RAFAEL de día).
+const DEFAULT_START = { 4: "2026-11-30" };
+function startOf(p) { return (state.starts && state.starts[p]) || DEFAULT_START[p] || state.start; }
+
 function save() { try { localStorage.setItem("turnos-v4", JSON.stringify(state)); } catch (e) {} }
 
 function editsFor(p) { return (state.edits[p] = state.edits[p] || {}); }
@@ -503,7 +507,7 @@ function monthData() {
   const last = new Date(y, m, 0);
   const gridStart = addDays(first, -mod(first.getDay() - 1, 7));
   const gridEnd = addDays(last, mod(7 - last.getDay(), 7));
-  const start = parseISO(state.start);
+  const start = parseISO(startOf(state.p));
   const lastIdx = dayIndex(gridEnd, start);
   const base = lastIdx >= 0 ? PROPOSALS[state.p].build(lastIdx + 1, start) : [];
   const edits = editsFor(state.p);
@@ -571,7 +575,7 @@ function render() {
   $("p-desc").textContent = P.desc;
   $("p-pattern").innerHTML = P.pattern;
   $("foot-pattern").textContent = P.foot;
-  $("start").value = state.start;
+  $("start").value = startOf(state.p);
   $("month").value = state.month;
 
   const { first, rows } = monthData();
@@ -629,7 +633,7 @@ function render() {
 
 // ---- Edición: cambiar, agregar y quitar analistas ----
 function baseFor(iso) {
-  const start = parseISO(state.start);
+  const start = parseISO(startOf(state.p));
   const idx = dayIndex(parseISO(iso), start);
   return idx >= 0 ? PROPOSALS[state.p].build(idx + 1, start)[idx] : null;
 }
@@ -688,7 +692,12 @@ function shiftMonth(delta) {
 }
 
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => { state.p = Number(t.dataset.p); render(); }));
-$("start").addEventListener("change", e => { if (e.target.value) { state.start = e.target.value; render(); } });
+$("start").addEventListener("change", e => {
+  if (!e.target.value) return;
+  state.starts = state.starts || {};
+  state.starts[state.p] = e.target.value;
+  render();
+});
 $("month").addEventListener("change", e => { if (e.target.value) { state.month = e.target.value; render(); } });
 $("prev").addEventListener("click", () => shiftMonth(-1));
 $("next").addEventListener("click", () => shiftMonth(1));
