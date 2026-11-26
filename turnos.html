@@ -147,6 +147,8 @@
   .num { font-size: 1.25rem; font-weight: 800; color: var(--title); line-height: 1; display: flex; align-items: baseline; gap: 6px; }
   .num small { font-size: .7rem; font-weight: 700; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; }
   .num .wd { display: none; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: capitalize; }
+  .cell.special { border: 2px solid #d4a017; padding: 8px; }
+  .sp-tag { margin-top: -2px; font-size: .68rem; font-weight: 800; letter-spacing: .3px; color: #9a6b00; text-transform: uppercase; line-height: 1.15; }
   .empty-msg { font-size: .75rem; color: var(--muted); font-style: italic; }
 
   .sh { border-radius: 8px; padding: 6px 7px; color: #fff; font-weight: 700; display: flex; align-items: stretch; gap: 7px; }
@@ -265,6 +267,7 @@
     <button class="tab" role="tab" data-p="1">1) 1 de día · 1 de noche</button>
     <button class="tab" role="tab" data-p="2">2) Día fijo Osneiling/Rafael · noche entre 4</button>
     <button class="tab" role="tab" data-p="3">3) Sin noche mar–jue (Osneiling, Rafael)</button>
+    <button class="tab" role="tab" data-p="4">4) KEVIN fijo + fechas especiales</button>
   </div>
 
   <section class="card">
@@ -379,7 +382,67 @@ const PROPOSALS = {
       }
       return out;
     }
+  },
+  4: {
+    title: "Propuesta 4 — KEVIN fijo, fechas especiales y turnos parejos",
+    desc: "KEVIN hace siempre el lunes de noche y de miércoles a viernes de día. En las fechas especiales se asignan obligatoriamente los analistas del sorteo, aunque no coincidan con la regla de KEVIN. De miércoles a viernes el día lleva 2 analistas (KEVIN y otro); el resto de días, 1 de día y 1 de noche. Los demás turnos se reparten para que ARIEL, OSNEILING, RAFAEL, LUIS y OSCAR tengan la misma cantidad de turnos en el mes, mezclando días y noches, sin salir de noche para entrar de día y evitando días seguidos.",
+    pattern: "KEVIN: <code>lunes noche</code> · <code>mié–vie día</code> · Fechas especiales: <code>07/12</code> <code>08/12</code> <code>24/12</code> <code>25/12</code> <code>31/12</code> <code>01/01</code> con turnos obligatorios",
+    foot: "KEVIN: lunes de noche y miércoles a viernes de día · ★ Fecha especial con turnos del sorteo",
+    build(n, start) {
+      const others = ALL.filter(p => p !== "KEVIN");
+      const kevinDay = wd => [3, 4, 5].includes(wd);
+      const out = [];
+      let monthKey = null, cnt, dc, nc;
+      for (let i = 0; i < n; i++) {
+        const date = addDays(start, i);
+        const wd = date.getDay();
+        const mk = date.getFullYear() * 12 + date.getMonth();
+        if (mk !== monthKey) {
+          // Reparto parejo dentro de cada mes: se cuentan de antemano los turnos obligatorios del mes.
+          monthKey = mk;
+          cnt = {}; dc = {}; nc = {};
+          ALL.forEach(p => { cnt[p] = 0; dc[p] = 0; nc[p] = 0; });
+          for (let d = new Date(date.getFullYear(), date.getMonth(), 1); d.getMonth() === date.getMonth(); d = addDays(d, 1)) {
+            const sp = SPECIAL[toISO(d)];
+            if (!sp) continue;
+            sp.day.forEach(p => { cnt[p]++; dc[p]++; });
+            sp.night.forEach(p => { cnt[p]++; nc[p]++; });
+          }
+        }
+        const sp = SPECIAL[toISO(date)];
+        if (sp) { out.push({ day: sp.day.slice(), night: sp.night.slice() }); continue; }
+        const prev = out[i - 1], prev2 = out[i - 2];
+        const tomorrow = SPECIAL[toISO(addDays(date, 1))];
+        const worked = (s, p) => s && (s.day.includes(p) || s.night.includes(p));
+        const tie = p => mod(others.indexOf(p) - i, others.length);
+        const cost = (p, kind) => cnt[p] * 10 + (kind === "n" ? nc[p] : dc[p]) * 4 + (worked(prev, p) ? 25 : 0) + (worked(prev2, p) ? 3 : 0);
+        const pick = (cands, kind) => cands.sort((a, b) => cost(a, kind) - cost(b, kind) || tie(a) - tie(b))[0];
+        const day = kevinDay(wd) ? ["KEVIN"] : [];
+        const night = wd === 1 ? ["KEVIN"] : [];
+        const busy = p => day.includes(p) || night.includes(p);
+        if (!night.length) {
+          const nCands = others.filter(p => !busy(p) && !(tomorrow && tomorrow.day.includes(p)));
+          const nP = pick(nCands.length ? nCands : others.filter(p => !busy(p)), "n");
+          night.push(nP); cnt[nP]++; nc[nP]++;
+        }
+        const dCands = others.filter(p => !busy(p) && !(prev && prev.night.includes(p)));
+        const dP = pick(dCands.length ? dCands : others.filter(p => !busy(p)), "d");
+        day.push(dP); cnt[dP]++; dc[dP]++;
+        out.push({ day, night });
+      }
+      return out;
+    }
   }
+};
+
+// Fechas especiales (sorteo): turnos obligatorios. JOSUÉ PEREZ = ARIEL, JOSUÉ ORTEGA = RAFAEL.
+const SPECIAL = {
+  "2026-12-07": { name: "La Gritería", day: ["ARIEL"], night: ["OSNEILING"] },
+  "2026-12-08": { name: "Inmaculada Concepción", day: ["KEVIN"], night: ["ARIEL"] },
+  "2026-12-24": { name: "Nochebuena", day: ["OSCAR"], night: ["LUIS"] },
+  "2026-12-25": { name: "Navidad", day: ["OSNEILING"], night: ["RAFAEL"] },
+  "2026-12-31": { name: "Fin de Año", day: ["ARIEL"], night: ["KEVIN"] },
+  "2027-01-01": { name: "Año Nuevo", day: ["RAFAEL"], night: ["OSCAR"] }
 };
 
 // OSNEILING y RAFAEL: sin noche martes (2), miércoles (3) y jueves (4) en la propuesta 3; nunca en la 2.
@@ -436,14 +499,21 @@ function monthData() {
     const shift = idx >= 0 ? sched[idx] : null;
     rows.push({
       date, inMonth: date.getMonth() === m - 1, shift,
-      warn: shift ? validate(shift, idx > 0 ? sched[idx - 1] : null, date.getDay()) : []
+      warn: shift ? validate(shift, idx > 0 ? sched[idx - 1] : null, date) : []
     });
   }
   return { first, rows };
 }
 
-function validate(shift, prev, wd) {
+function validate(shift, prev, date) {
+  const wd = date.getDay();
   const w = [];
+  if (state.p === 4) {
+    const sp = SPECIAL[toISO(date)];
+    if (sp && (!same(shift.day, sp.day) || !same(shift.night, sp.night))) w.push(`Fecha especial (${sp.name}): debe ser ${sp.day.join(", ")} de día y ${sp.night.join(", ")} de noche`);
+    if (!sp && wd === 1 && !shift.night.includes("KEVIN")) w.push("KEVIN debe hacer el lunes de noche");
+    if (!sp && [3, 4, 5].includes(wd) && !shift.day.includes("KEVIN")) w.push("KEVIN debe hacer de miércoles a viernes de día");
+  }
   const all = shift.day.concat(shift.night);
   all.forEach((p, i) => { if (all.indexOf(p) !== i) w.push(`${p} tiene dos turnos el mismo día`); });
   if (prev) shift.day.forEach(p => { if (prev.night.includes(p)) w.push(`${p} sale de noche y entra de día`); });
@@ -505,7 +575,9 @@ function render() {
     if (iso === todayISO) cls.push("today");
     if (warn.length) cls.push("warn");
     const label = (date.getDate() === 1 || !inMonth) ? ` <small>${MONTHS_SHORT[date.getMonth()]}</small>` : "";
-    let c = `<div class="${cls.join(" ")}"><div class="num"><span class="wd">${wdName}</span>${date.getDate()}${label}</div>`;
+    const sp = state.p === 4 ? SPECIAL[iso] : null;
+    let c = `<div class="${cls.join(" ")}${sp ? " special" : ""}"><div class="num"><span class="wd">${wdName}</span>${date.getDate()}${label}</div>`;
+    if (sp) c += `<div class="sp-tag">★ ${esc(sp.name)}</div>`;
     if (shift) {
       c += shiftHTML(iso, "day", shift.day, shift.base.day) + shiftHTML(iso, "night", shift.night, shift.base.night);
       if (warn.length) c += `<div class="warn-msg">⚠ ${warn.map(esc).join(" · ")}</div>`;
