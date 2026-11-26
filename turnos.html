@@ -147,8 +147,8 @@
   .num { font-size: 1.25rem; font-weight: 800; color: var(--title); line-height: 1; display: flex; align-items: baseline; gap: 6px; }
   .num small { font-size: .7rem; font-weight: 700; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; }
   .num .wd { display: none; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: capitalize; }
-  .cell.special { border: 2px solid #d4a017; padding: 8px; }
-  .sp-tag { margin-top: -2px; font-size: .68rem; font-weight: 800; letter-spacing: .3px; color: #9a6b00; text-transform: uppercase; line-height: 1.15; }
+  .cell.special { border: 2px solid #1e7b34; padding: 8px; }
+  .sp-tag { margin-top: -2px; font-size: .68rem; font-weight: 800; letter-spacing: .3px; color: #1e7b34; text-transform: uppercase; line-height: 1.15; }
   .empty-msg { font-size: .75rem; color: var(--muted); font-style: italic; }
 
   .sh { border-radius: 8px; padding: 6px 7px; color: #fff; font-weight: 700; display: flex; align-items: stretch; gap: 7px; }
@@ -384,50 +384,41 @@ const PROPOSALS = {
     }
   },
   4: {
-    title: "Propuesta 4 — KEVIN fijo, fechas especiales y turnos parejos",
-    desc: "KEVIN hace siempre el lunes de noche y de miércoles a viernes de día. En las fechas especiales se asignan obligatoriamente los analistas del sorteo, aunque no coincidan con la regla de KEVIN. De miércoles a viernes el día lleva 2 analistas (KEVIN y otro); el resto de días, 1 de día y 1 de noche. Los demás turnos se reparten para que ARIEL, OSNEILING, RAFAEL, LUIS y OSCAR tengan la misma cantidad de turnos en el mes, mezclando días y noches, sin salir de noche para entrar de día y evitando días seguidos.",
-    pattern: "KEVIN: <code>lunes noche</code> · <code>mié–vie día</code> · Fechas especiales: <code>07/12</code> <code>08/12</code> <code>24/12</code> <code>25/12</code> <code>31/12</code> <code>01/01</code> con turnos obligatorios",
-    foot: "KEVIN: lunes de noche y miércoles a viernes de día · ★ Fecha especial con turnos del sorteo",
+    title: "Propuesta 4 — Fechas especiales, patrón de 5 y KEVIN fijo",
+    desc: "Prioridad 1: en las fechas especiales se asignan obligatoriamente los analistas del sorteo. Prioridad 2: los demás turnos siguen el patrón RAFAEL → LUIS → OSNEILING → OSCAR → ARIEL, turno tras turno (primero el día y luego la noche de cada fecha). Prioridad 3: KEVIN hace el lunes de noche y de miércoles a viernes de día (con un segundo analista del patrón). Si al que le toca según el patrón no puede (trabaja en una fecha especial cercana o sale de noche), pasa el siguiente y él conserva su lugar para el próximo turno. Quien trabaja una fecha especial cuenta ese turno como su vuelta del patrón, así los turnos quedan parejos.",
+    pattern: "Patrón: <code>RAFAEL → LUIS → OSNEILING → OSCAR → ARIEL</code> · KEVIN: <code>lunes noche</code> · <code>mié–vie día</code> · Fechas especiales: <code>07/12</code> <code>08/12</code> <code>24/12</code> <code>25/12</code> <code>31/12</code> <code>01/01</code>",
+    foot: "Patrón: RAFAEL → LUIS → OSNEILING → OSCAR → ARIEL · KEVIN: lunes de noche y miércoles a viernes de día · ★ Fecha especial",
     build(n, start) {
-      const others = ALL.filter(p => p !== "KEVIN");
+      const PATTERN = ["RAFAEL", "LUIS", "OSNEILING", "OSCAR", "ARIEL"];
       const kevinDay = wd => [3, 4, 5].includes(wd);
+      let queue = PATTERN.slice();
+      const take = ok => {
+        const p = queue.find(ok) || queue.find(x => ok.loose(x)) || queue[0];
+        queue = queue.filter(x => x !== p).concat(p);
+        return p;
+      };
       const out = [];
-      let monthKey = null, cnt, dc, nc;
       for (let i = 0; i < n; i++) {
         const date = addDays(start, i);
         const wd = date.getDay();
-        const mk = date.getFullYear() * 12 + date.getMonth();
-        if (mk !== monthKey) {
-          // Reparto parejo dentro de cada mes: se cuentan de antemano los turnos obligatorios del mes.
-          monthKey = mk;
-          cnt = {}; dc = {}; nc = {};
-          ALL.forEach(p => { cnt[p] = 0; dc[p] = 0; nc[p] = 0; });
-          for (let d = new Date(date.getFullYear(), date.getMonth(), 1); d.getMonth() === date.getMonth(); d = addDays(d, 1)) {
-            const sp = SPECIAL[toISO(d)];
-            if (!sp) continue;
-            sp.day.forEach(p => { cnt[p]++; dc[p]++; });
-            sp.night.forEach(p => { cnt[p]++; nc[p]++; });
-          }
-        }
         const sp = SPECIAL[toISO(date)];
-        if (sp) { out.push({ day: sp.day.slice(), night: sp.night.slice() }); continue; }
-        const prev = out[i - 1], prev2 = out[i - 2];
+        if (sp) {
+          // Prioridad 1: turnos del sorteo. Quien trabaja aquí cuenta su vuelta del patrón.
+          sp.day.concat(sp.night).forEach(p => { if (queue.includes(p)) queue = queue.filter(x => x !== p).concat(p); });
+          out.push({ day: sp.day.slice(), night: sp.night.slice() });
+          continue;
+        }
+        const prev = out[i - 1];
         const tomorrow = SPECIAL[toISO(addDays(date, 1))];
-        const worked = (s, p) => s && (s.day.includes(p) || s.night.includes(p));
-        const tie = p => mod(others.indexOf(p) - i, others.length);
-        const cost = (p, kind) => cnt[p] * 10 + (kind === "n" ? nc[p] : dc[p]) * 4 + (worked(prev, p) ? 25 : 0) + (worked(prev2, p) ? 3 : 0);
-        const pick = (cands, kind) => cands.sort((a, b) => cost(a, kind) - cost(b, kind) || tie(a) - tie(b))[0];
         const day = kevinDay(wd) ? ["KEVIN"] : [];
         const night = wd === 1 ? ["KEVIN"] : [];
         const busy = p => day.includes(p) || night.includes(p);
+        const dayOk = Object.assign(p => !busy(p) && !(prev && prev.night.includes(p)), { loose: p => !busy(p) });
+        day.push(take(dayOk));
         if (!night.length) {
-          const nCands = others.filter(p => !busy(p) && !(tomorrow && tomorrow.day.includes(p)));
-          const nP = pick(nCands.length ? nCands : others.filter(p => !busy(p)), "n");
-          night.push(nP); cnt[nP]++; nc[nP]++;
+          const nightOk = Object.assign(p => !busy(p) && !(tomorrow && tomorrow.day.includes(p)), { loose: p => !busy(p) });
+          night.push(take(nightOk));
         }
-        const dCands = others.filter(p => !busy(p) && !(prev && prev.night.includes(p)));
-        const dP = pick(dCands.length ? dCands : others.filter(p => !busy(p)), "d");
-        day.push(dP); cnt[dP]++; dc[dP]++;
         out.push({ day, night });
       }
       return out;
