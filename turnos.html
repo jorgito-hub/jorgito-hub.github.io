@@ -147,8 +147,10 @@
   .num { font-size: 1.25rem; font-weight: 800; color: var(--title); line-height: 1; display: flex; align-items: baseline; gap: 6px; }
   .num small { font-size: .7rem; font-weight: 700; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; }
   .num .wd { display: none; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: capitalize; }
-  .cell.special { border: 2px solid #1e7b34; padding: 8px; }
-  .sp-tag { margin-top: -2px; font-size: .68rem; font-weight: 800; letter-spacing: .3px; color: #1e7b34; text-transform: uppercase; line-height: 1.15; }
+  /* Fechas especiales: recuadro verde navideño y nombre en dorado */
+  .cell.special { background: #1e7b34; border-color: #145a26; }
+  .cell.special .num, .cell.special .num small { color: #fff; }
+  .sp-tag { margin-top: -2px; font-size: .72rem; font-weight: 900; letter-spacing: .3px; color: #f5c400; text-transform: uppercase; line-height: 1.15; }
   .empty-msg { font-size: .75rem; color: var(--muted); font-style: italic; }
 
   .sh { border-radius: 8px; padding: 6px 7px; color: #fff; font-weight: 700; display: flex; align-items: stretch; gap: 7px; }
@@ -236,7 +238,6 @@
     .grid { grid-template-columns: 1fr; }
     .dow { display: none; }
     .cell { min-height: 0; }
-    .cell.blank { display: none; }
     .num .wd { display: inline; }
     .p { font-size: .95rem; }
   }
@@ -759,7 +760,6 @@ $("png").addEventListener("click", async () => {
         s.querySelectorAll(".acts, .warn-msg").forEach(el => el.remove());
         s.querySelectorAll(".p").forEach(el => { el.style.fontSize = "15px"; });
         s.querySelectorAll(".cell").forEach(el => el.classList.remove("today", "warn"));
-        s.querySelectorAll(".cell.blank").forEach(el => { el.style.visibility = "hidden"; });
         s.querySelectorAll(".p.edited").forEach(el => el.classList.remove("edited"));
       }
     });
