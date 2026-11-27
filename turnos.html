@@ -284,16 +284,16 @@
   <section class="sheet" id="sheet">
     <div class="sheet-head">
       <div>
-        <h1>CALENDARIO DE TURNO</h1>
+        <h1>CALENDARIO MONITOREO DIS</h1>
         <div class="sheet-sub" id="sheet-sub"></div>
       </div>
       <div class="pills">
-        <span class="pill d"><span class="pico"></span>Día · 08:00 – 16:00</span>
-        <span class="pill n"><span class="pico"></span>Noche · 16:00 – 08:00</span>
+        <span class="pill d"><span class="pico"></span>Día · 08AM – 05PM</span>
+        <span class="pill n"><span class="pico"></span>Noche · 05PM – 08AM</span>
       </div>
     </div>
     <div class="grid" id="grid"></div>
-    <div class="sheet-foot"><span id="foot-pattern"></span><span>Día 8 h · Noche 16 h</span></div>
+    <div class="sheet-foot"><span id="foot-pattern"></span><span>Día 9 h · Noche 15 h</span></div>
   </section>
   </div>
 
@@ -316,7 +316,7 @@
 <script>
 const ALL = ["ARIEL", "OSNEILING", "RAFAEL", "LUIS", "OSCAR", "KEVIN"];
 const COLORS = { ARIEL: "#f26b1d", OSNEILING: "#8b6fd8", RAFAEL: "#22b14c", LUIS: "#f2d41a", OSCAR: "#e3212b", KEVIN: "#1f6fd1" };
-const HOURS = { d: 8, n: 16 }; // día 08:00–16:00, noche 16:00–08:00
+const HOURS = { d: 9, n: 15 }; // día 08AM–05PM, noche 05PM–08AM
 const MAX_PER_SHIFT = 3;
 const PNG_SCALE = 5;
 const DAY_MS = 86400000;
@@ -363,7 +363,7 @@ const PROPOSALS = {
   3: {
     title: "Propuesta 3 — Patrón día/noche con restricción y horas equilibradas",
     desc: "Parte del patrón de la propuesta 1. OSNEILING y RAFAEL no hacen noche los martes, miércoles ni jueves (de día pueden trabajar cualquier día). Cada día se elige quién cubre la noche y el día buscando que todos acumulen las mismas horas: se sigue el patrón cuando es justo y, si alguien va atrasado o adelantado en horas, se ajusta. Nadie trabaja dos días seguidos.",
-    pattern: "Base: <code>ARIEL / OSNEILING</code> → <code>RAFAEL / LUIS</code> → <code>OSCAR / KEVIN</code>, invirtiendo día/noche en cada vuelta · Sin noche mar–jue: <code>OSNEILING</code>, <code>RAFAEL</code> · Diferencia típica entre analistas: 1 noche (16 h) al mes",
+    pattern: "Base: <code>ARIEL / OSNEILING</code> → <code>RAFAEL / LUIS</code> → <code>OSCAR / KEVIN</code>, invirtiendo día/noche en cada vuelta · Sin noche mar–jue: <code>OSNEILING</code>, <code>RAFAEL</code> · Diferencia típica entre analistas: 1 noche (15 h) al mes",
     foot: "Rotación día / noche con horas equilibradas · OSNEILING y RAFAEL sin noche de martes a jueves",
     build(n, start) {
       const base = grouped(n, 2);
@@ -581,7 +581,7 @@ function render() {
   const { first, rows } = monthData();
   const mt = first.toLocaleDateString("es", { month: "long", year: "numeric" });
   const monthName = mt.charAt(0).toUpperCase() + mt.slice(1);
-  $("sheet-sub").textContent = `${monthName} · Propuesta ${state.p}`;
+  $("sheet-sub").textContent = monthName.toUpperCase();
   $("sum-title").textContent = `Resumen de ${monthName.toLowerCase()}`;
 
   const todayISO = toISO(new Date());
@@ -714,7 +714,7 @@ function download(blob, name) {
 
 $("csv").addEventListener("click", () => {
   const { rows } = monthData();
-  const lines = ["Fecha;Turno de día (08:00-16:00);Turno de noche (16:00-08:00);Alertas"];
+  const lines = ["Fecha;Turno de día (08AM-05PM);Turno de noche (05PM-08AM);Alertas"];
   const counts = Object.fromEntries(ALL.map(p => [p, { d: 0, n: 0 }]));
   rows.forEach(({ date, inMonth, shift, warn }) => {
     if (!inMonth || !shift) return;
@@ -777,7 +777,7 @@ $("png").addEventListener("click", async () => {
     const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
     if (!blob) throw new Error("el navegador no pudo crear la imagen");
     progress(100, scale < PNG_SCALE ? `Listo (escala ${scaleTxt}: la máxima que permite este dispositivo)` : "Listo");
-    download(blob, `calendario-de-turno-propuesta${state.p}-${state.month}.png`);
+    download(blob, `calendario-monitoreo-dis-${state.month}.png`);
     await new Promise(r => setTimeout(r, 900));
   } catch (err) {
     clearInterval(timer);
